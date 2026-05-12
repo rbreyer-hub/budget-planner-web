@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Budget Planner — plan your month, hit zero stress</title>
+  <meta name="description" content="A free, private budget planner. Track bills by interval, project your balance for any date, and catch low-balance days before they hit. Your data stays in your browser." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#top">
+      <span class="brand-mark">$</span>
+      <span class="brand-name">Budget Planner</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#planner">Planner</a>
+      <a href="#faq">FAQ</a>
+      <a href="#planner" class="nav-cta">Open planner</a>
+    </nav>
+    <button class="nav-toggle" aria-label="Menu">&#9776;</button>
+  </div>
+</header>
+
+<main id="top">
+
+  <section class="hero">
+    <div class="hero-grain"></div>
+    <div class="hero-glow"></div>
+    <div class="hero-inner">
+      <div class="hero-eyebrow">
+        <span class="dot"></span> Free &middot; Private &middot; Runs in your browser
+      </div>
+      <h1 class="hero-title">
+        Plan your month. <span class="title-accent">Hit zero stress.</span>
+      </h1>
+      <p class="hero-sub">
+        Add your bills once. See your balance on any future date. Catch low-balance days
+        weeks before they happen &mdash; with bills, deposits, incidentals, and inter-account loans
+        all in one view.
+      </p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#planner">Open the planner <span aria-hidden="true">&rarr;</span></a>
+        <a class="btn btn-ghost" href="#features">How it works</a>
+      </div>
+      <div class="hero-stats">
+        <div><strong>100%</strong><span>private</span></div>
+        <div><strong>$0</strong><span>forever</span></div>
+        <div><strong>0</strong><span>signups</span></div>
+        <div><strong>&infin;</strong><span>budgets</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="marquee" aria-hidden="true">
+    <div class="marquee-track">
+      <span>Bills</span><span>&middot;</span><span>Income</span><span>&middot;</span><span>Incidentals</span><span>&middot;</span><span>Loans</span><span>&middot;</span><span>Projections</span><span>&middot;</span><span>Alerts</span><span>&middot;</span><span>Monthly breakdown</span><span>&middot;</span><span>Multi-budget</span><span>&middot;</span><span>Bills</span><span>&middot;</span><span>Income</span><span>&middot;</span><span>Incidentals</span><span>&middot;</span><span>Loans</span><span>&middot;</span><span>Projections</span><span>&middot;</span><span>Alerts</span><span>&middot;</span><span>Monthly breakdown</span><span>&middot;</span><span>Multi-budget</span><span>&middot;</span>
+    </div>
+  </section>
+
+  <section id="features" class="section">
+    <div class="section-head reveal">
+      <span class="kicker">What it does</span>
+      <h2>Every dollar, every date, one screen.</h2>
+      <p class="lede">
+        Built for people who want to look ahead, not just look back. Set it up once and let
+        the projections do the worrying for you.
+      </p>
+    </div>
+    <div class="card-grid">
+      <article class="info-card reveal">
+        <div class="info-icon">&#128197;</div>
+        <h3>Bills on any interval</h3>
+        <p>Monthly, biweekly, weekly, one-time. Set the due day or start date and the planner handles the rest.</p>
+      </article>
+      <article class="info-card reveal">
+        <div class="info-icon">&#128202;</div>
+        <h3>Project any future date</h3>
+        <p>Pick a date and see your ending balance, with a day-by-day breakdown of what hits before then.</p>
+      </article>
+      <article class="info-card reveal">
+        <div class="info-icon">&#9888;</div>
+        <h3>Negative-day alerts</h3>
+        <p>Spots the days you'll dip below zero this month before they happen &mdash; with the exact balance.</p>
+      </article>
+      <article class="info-card reveal">
+        <div class="info-icon">&#128176;</div>
+        <h3>Track inter-account loans</h3>
+        <p>Pulled from savings to cover a shortfall? Log it once and the planner tracks the repayment.</p>
+      </article>
+      <article class="info-card reveal">
+        <div class="info-icon">&#128221;</div>
+        <h3>Incidentals with &ldquo;in balance&rdquo;</h3>
+        <p>Log the dinners and impulse buys. Mark items already reflected in your balance so you never double-count.</p>
+      </article>
+      <article class="info-card reveal">
+        <div class="info-icon">&#128274;</div>
+        <h3>Stays in your browser</h3>
+        <p>No accounts, no servers, no tracking. Use Backup All to download a JSON copy you control.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="planner" class="section planner-section">
+    <div class="section-head reveal">
+      <span class="kicker">The planner</span>
+      <h2>Your budget, right here.</h2>
+      <p class="lede">Add a bill, set a check date, and watch the numbers fall into place. Multiple budgets via the tabs below.</p>
+    </div>
+
+    <div class="planner-shell">
+      <div class="planner-header">
+        <h3 id="appTitle" title="Click to edit" tabindex="0">Budget Planner</h3>
+        <div id="optionalSections" class="optional-sections">
+          <span class="optional-label">Optional sections:</span>
+          <label class="toggle-label">
+            <input type="checkbox" id="toggleLoansSection" />
+            Loans from Other Accounts
+          </label>
+        </div>
+      </div>
+
+      <div class="tab-bar" id="tabBar">
+        <!-- Tabs rendered dynamically from JS -->
+      </div>
+
+      <section class="grid">
+        <div class="card">
+          <h2>Starting Balance</h2>
+          <div class="row">
+            <div>
+              <label for="startingBalance">Starting balance</label>
+              <input id="startingBalance" type="number" step="0.01" />
+            </div>
+            <div class="compact">
+              <label for="balanceDate">Balance date</label>
+              <input id="balanceDate" type="date" />
+            </div>
+          </div>
+          <p class="muted" style="margin-top: 8px;">Balance applies on the date entered.</p>
+          <div class="summary current-balance-row" style="margin-top: 12px;">
+            <span class="muted">Current Balance <span class="muted" id="currentBalanceAsOf" style="font-size:11px"></span></span>
+            <strong id="currentBalance">$0.00</strong>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Check a Date</h2>
+          <div>
+            <label for="checkDate">Select date</label>
+            <input id="checkDate" type="date" />
+          </div>
+          <div class="summary" style="margin-top: 12px;">
+            <span class="muted">Ending balance</span>
+            <strong id="endingBalance">$0.00</strong>
+            <span id="balanceState" class="tag">Neutral</span>
+          </div>
+          <div id="billsSummary" style="margin-top: 12px;"></div>
+        </div>
+        <div class="card">
+          <h2>Quick Add Bill / Expense</h2>
+          <div class="row">
+            <div>
+              <label for="newName">Bill name</label>
+              <input id="newName" type="text" placeholder="New bill" />
+            </div>
+            <div class="mini">
+              <label for="newAmount">Amount</label>
+              <input id="newAmount" type="number" step="0.01" />
+            </div>
+          </div>
+          <div class="row" style="margin-top: 8px;">
+            <div>
+              <label for="newInterval">Interval</label>
+              <select id="newInterval">
+                <option value="monthly">Monthly</option>
+                <option value="weekly">Weekly</option>
+                <option value="biweekly">Biweekly</option>
+                <option value="one-time">One-time</option>
+              </select>
+            </div>
+            <div class="mini">
+              <label for="newDueDay">Due day (1-31)</label>
+              <input id="newDueDay" type="number" min="1" max="31" placeholder="e.g. 15" />
+            </div>
+          </div>
+          <div class="row" style="margin-top: 8px;">
+            <div>
+              <label for="newStartDate">Start date</label>
+              <input id="newStartDate" type="date" />
+            </div>
+            <div>
+              <label for="newType">Type</label>
+              <select id="newType">
+                <option value="expense">Expense</option>
+                <option value="income">Income</option>
+              </select>
+            </div>
+          </div>
+          <div class="actions" style="margin-top: 12px;">
+            <button id="addBill">Add bill</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" id="negativeAlertCard" style="display:none">
+        <h2>&#9888; Monthly Balance Alert</h2>
+        <div id="negativeAlertContent"></div>
+      </section>
+
+      <section class="card" id="monthlyExpenseCard">
+        <div class="row" style="align-items: flex-end;">
+          <h2 style="margin: 0; flex: 1;">&#128197; Monthly Expense Summary</h2>
+          <div style="flex:0 0 auto;">
+            <label for="expenseMonth">Month</label>
+            <input id="expenseMonth" type="month" style="width:auto" />
+          </div>
+        </div>
+        <p class="muted">All bills and expenses for the selected month. Use this to verify nothing is missing.</p>
+        <div id="monthlyExpenseContent"></div>
+      </section>
+
+      <section class="card" id="monthlyBreakdownCard">
+        <div class="row" style="align-items: flex-end;">
+          <h2 style="margin: 0; flex: 1;">&#128202; Monthly Breakdown</h2>
+          <div style="flex:0 0 auto;">
+            <label for="breakdownMonths">Months ahead</label>
+            <select id="breakdownMonths" style="width:auto">
+              <option value="3">3</option>
+              <option value="6">6</option>
+              <option value="12" selected>12</option>
+              <option value="24">24</option>
+            </select>
+          </div>
+          <div style="flex:0 0 auto; align-self: flex-end;">
+            <button id="toggleBreakdown" class="secondary" style="width:auto; padding:8px 14px;">Hide</button>
+          </div>
+        </div>
+        <p class="muted">Income, expenses, and ending balance for each month &mdash; uses the same calculation as the timeline.</p>
+        <div id="monthlyBreakdownContent"></div>
+      </section>
+
+      <section class="card">
+        <div class="row" style="align-items: flex-end;">
+          <h2 style="margin: 0; flex: 1;">Bills</h2>
+          <div class="actions">
+            <button class="secondary" id="importBills">Import CSV</button>
+            <button class="secondary" id="downloadTemplate">Download Template</button>
+            <button class="secondary" id="resetBills">Reset defaults</button>
+            <button class="secondary" id="exportBills">Export JSON</button>
+            <button class="secondary" id="backupAll" style="background:#059669;color:#fff">Backup All</button>
+            <button class="secondary" id="restoreBackup">Restore Backup</button>
+            <input type="file" id="csvFileInput" accept=".csv,.tsv,.txt" style="display:none" />
+            <input type="file" id="jsonBackupInput" accept=".json" style="display:none" />
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Amount</th>
+              <th>Interval</th>
+              <th>Due Day</th>
+              <th>Start Date</th>
+              <th>Type</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="billTable"></tbody>
+        </table>
+        </div>
+      </section>
+
+      <section class="card" id="pausedBillsCard" style="display:none">
+        <h2>&#9208; Paused Bills</h2>
+        <p class="muted">These bills are paused and excluded from all balance calculations. Click <strong>Resume</strong> to reactivate.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Amount</th>
+              <th>Interval</th>
+              <th>Type</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="pausedBillTable"></tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <div class="row" style="align-items: flex-end;">
+          <h2 style="margin: 0; flex: 1;">Additional Income / Deposits</h2>
+        </div>
+        <p class="muted">One-time income entries. <strong>Remove</strong> = delete &amp; keep balance impact. <strong>Cancel</strong> = delete as if it never happened.</p>
+        <div class="row">
+          <div>
+            <label for="depositName">Description</label>
+            <input id="depositName" type="text" placeholder="e.g. Tax refund" />
+          </div>
+          <div class="mini">
+            <label for="depositAmount">Amount</label>
+            <input id="depositAmount" type="number" step="0.01" />
+          </div>
+          <div class="compact">
+            <label for="depositDate">Date</label>
+            <input id="depositDate" type="date" />
+          </div>
+          <div style="flex:0 0 auto; align-self: flex-end;">
+            <button id="addDeposit" style="width:auto; padding:8px 18px;">Add</button>
+          </div>
+        </div>
+        <table style="margin-top: 12px;">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Amount</th>
+              <th>Date</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="depositTable"></tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <div class="row" style="align-items: flex-end;">
+          <h2 style="margin: 0; flex: 1;">Incidental One-Time Payments</h2>
+        </div>
+        <p class="muted">Track unplanned, one-time expenses (eating out, impulse buys, etc.). Past months auto-archive but still count toward your balance.</p>
+        <div class="row">
+          <div>
+            <label for="incName">Description</label>
+            <input id="incName" type="text" placeholder="e.g. Dinner out" />
+          </div>
+          <div class="mini">
+            <label for="incAmount">Amount</label>
+            <input id="incAmount" type="number" step="0.01" />
+          </div>
+          <div class="compact">
+            <label for="incDate">Date</label>
+            <input id="incDate" type="date" />
+          </div>
+          <div style="flex:0 0 auto; align-self: flex-end;">
+            <button id="addIncidental" style="width:auto; padding:8px 18px;">Add</button>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <label class="toggle-label" title="Check this if your current bank balance already reflects this payment. The item is logged for tracking but skipped from all balance projections.">
+            <input type="checkbox" id="incInBalance" />
+            Already in current balance (record only &mdash; don't subtract)
+          </label>
+        </div>
+        <div id="incidentalSummary" class="incidental-summary" style="display:none"></div>
+        <div id="incidentalGroups" style="margin-top: 12px;"></div>
+      </section>
+
+      <section class="card" id="loansSection">
+        <h2>&#128176; Loans from Other Accounts</h2>
+        <p class="muted">Track money pulled from another account to cover shortfalls. Each entry is an individual loan to pay back. Loans add to your balance on the loan date; repayments deduct on the repaid date.</p>
+        <div class="row">
+          <div>
+            <label for="loanName">Description</label>
+            <input id="loanName" type="text" placeholder="e.g. Transfer from savings" />
+          </div>
+          <div class="mini">
+            <label for="loanAmount">Amount</label>
+            <input id="loanAmount" type="number" step="0.01" />
+          </div>
+          <div class="compact">
+            <label for="loanDate">Loan Date</label>
+            <input id="loanDate" type="date" />
+          </div>
+          <div class="compact">
+            <label for="loanRepayDate">Scheduled Repay</label>
+            <input id="loanRepayDate" type="date" />
+          </div>
+          <div style="flex:0 0 auto; align-self: flex-end;">
+            <button id="addLoan" style="width:auto; padding:8px 18px;">Add Loan</button>
+          </div>
+        </div>
+        <div id="loanSummary" class="incidental-summary" style="display:none"></div>
+        <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Amount</th>
+              <th>Loan Date</th>
+              <th>Scheduled Repay</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="loanTable"></tbody>
+        </table>
+        </div>
+      </section>
+
+    </div><!-- /.planner-shell -->
+  </section>
+
+  <section id="faq" class="section faq">
+    <div class="section-head reveal">
+      <span class="kicker">FAQ</span>
+      <h2>The honest questions.</h2>
+    </div>
+    <div class="faq-list">
+      <details class="faq-item reveal">
+        <summary>Where is my data stored?</summary>
+        <p>In your browser's local storage &mdash; nowhere else. Nothing is uploaded, nothing leaves your device. If you clear your browser data, you lose your budgets, so use <strong>Backup All</strong> periodically to download a JSON copy.</p>
+      </details>
+      <details class="faq-item reveal">
+        <summary>Can I use this on multiple devices?</summary>
+        <p>Yes, but it doesn't auto-sync. On device A, click <strong>Backup All</strong> to download a JSON file. On device B, click <strong>Restore Backup</strong> and pick that file. Repeat whenever you make changes you want to carry over.</p>
+      </details>
+      <details class="faq-item reveal">
+        <summary>How do multiple users share a browser?</summary>
+        <p>Each browser stores its own data, so if two people share a computer with separate browser profiles, they each get their own budgets. Within one browser, the tabs (e.g. &ldquo;My Budget&rdquo;, &ldquo;Joint Budget&rdquo;) let one user track several budgets side-by-side.</p>
+      </details>
+      <details class="faq-item reveal">
+        <summary>What's the &ldquo;In balance&rdquo; checkbox on incidentals?</summary>
+        <p>Use it for incidentals already reflected in your current bank balance. The item is recorded for tracking but skipped from balance projections, so it doesn't get subtracted twice.</p>
+      </details>
+      <details class="faq-item reveal">
+        <summary>Is the code open source?</summary>
+        <p>Yes &mdash; it's hosted on GitHub Pages from a public repository. Fork it, audit it, or run your own copy.</p>
+      </details>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <div class="brand">
+        <span class="brand-mark">$</span>
+        <span class="brand-name">Budget Planner</span>
+      </div>
+      <p class="footer-tag">Free, private, browser-only budget planning.</p>
+    </div>
+    <div class="footer-links">
+      <a href="#features">Features</a>
+      <a href="#planner">Planner</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <p class="footer-copy">&copy; <span id="year"></span> Budget Planner. Your money, your machine.</p>
+  </div>
+</footer>
+
+<div id="saveToast" class="save-toast">&#10003; Saved</div>
+
+<script src="budget.js"></script>
+<script>
+  /* Nav scroll state + mobile toggle + year + reveal animations */
+  (function () {
+    const nav = document.getElementById('nav');
+    const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 16);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    const toggle = document.querySelector('.nav-toggle');
+    const links = document.querySelector('.nav-links');
+    if (toggle && links) {
+      toggle.addEventListener('click', () => links.classList.toggle('open'));
+      links.addEventListener('click', (e) => {
+        if (e.target.tagName === 'A') links.classList.remove('open');
+      });
+    }
+
+    const yearEl = document.getElementById('year');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+  })();
+</script>
+</body>
+</html>
