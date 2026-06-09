@@ -124,11 +124,15 @@ const saveState = () => {
   const data = JSON.stringify(state);
   chrome.storage.local.set({ [key]: data }, () => {
     showToast('\u2713 Saved');
+    window.cloudSync?.saveProfile(activeProfile, data);
   });
 };
 
 const saveProfiles = (callback) => {
-  chrome.storage.local.set({ [PROFILES_KEY]: JSON.stringify(profiles) }, callback);
+  chrome.storage.local.set({ [PROFILES_KEY]: JSON.stringify(profiles) }, () => {
+    window.cloudSync?.saveProfiles(profiles);
+    if (callback) callback();
+  });
 };
 
 const normalizeBills = () => {
@@ -1007,13 +1011,16 @@ const applyBreakdownVisibility = () => {
 
 toggleBreakdownBtn.addEventListener('click', () => {
   const hidden = localStorage.getItem(BREAKDOWN_HIDDEN_KEY) === '1';
-  localStorage.setItem(BREAKDOWN_HIDDEN_KEY, hidden ? '0' : '1');
+  const newVal = hidden ? '0' : '1';
+  localStorage.setItem(BREAKDOWN_HIDDEN_KEY, newVal);
+  window.cloudSync?.saveSetting(BREAKDOWN_HIDDEN_KEY, newVal);
   applyBreakdownVisibility();
   if (hidden) renderMonthlyBreakdown();
 });
 
 breakdownMonthsInput.addEventListener('change', () => {
   localStorage.setItem(BREAKDOWN_MONTHS_KEY, breakdownMonthsInput.value);
+  window.cloudSync?.saveSetting(BREAKDOWN_MONTHS_KEY, breakdownMonthsInput.value);
   renderMonthlyBreakdown();
 });
 
@@ -1085,15 +1092,19 @@ const renderMonthlyBreakdown = () => {
   html += '<th style="padding:8px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase">Expenses</th>';
   html += '<th style="padding:8px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase">Net</th>';
   html += '<th style="padding:8px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase">Ending</th>';
+  html += '<th style="padding:8px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase" title="Ending balance minus next month\'s scheduled expenses — money not already spoken for">Free</th>';
   html += '</tr></thead><tbody>';
 
   let totalIncome = 0, totalExpense = 0;
-  months.forEach(mo => {
+  months.forEach((mo, idx) => {
     totalIncome += mo.income;
     totalExpense += mo.expense;
     const net = mo.income - mo.expense;
+    const nextMonthExpense = idx + 1 < months.length ? months[idx + 1].expense : 0;
+    const free = mo.ending - nextMonthExpense;
     const endColor = mo.ending < 0 ? '#dc2626' : '#16a34a';
     const netColor = net < 0 ? '#dc2626' : (net > 0 ? '#16a34a' : 'var(--muted)');
+    const freeColor = free < 0 ? '#dc2626' : (free > 0 ? '#16a34a' : 'var(--muted)');
     const isCurrent = mo.key === todayKey;
     const rowStyle = isCurrent ? 'background:#dbeafe;border-left:4px solid #2563eb' : (mo.ending < 0 ? 'background:#fef2f2' : '');
     const monthName = mo.date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -1105,6 +1116,8 @@ const renderMonthlyBreakdown = () => {
     html += `<td style="padding:8px;text-align:right;color:#dc2626;border-bottom:1px solid var(--border)">${mo.expense > 0 ? '-' + formatMoney(mo.expense) : formatMoney(0)}</td>`;
     html += `<td style="padding:8px;text-align:right;color:${netColor};font-weight:600;border-bottom:1px solid var(--border)">${net >= 0 ? '+' : ''}${formatMoney(net)}</td>`;
     html += `<td style="padding:8px;text-align:right;color:${endColor};font-weight:700;border-bottom:1px solid var(--border)">${formatMoney(mo.ending)}</td>`;
+    const freeNote = idx + 1 < months.length ? '' : '<sup style="color:var(--muted);font-weight:400" title="No further months in range">†</sup>';
+    html += `<td style="padding:8px;text-align:right;color:${freeColor};font-weight:700;border-bottom:1px solid var(--border)">${formatMoney(free)}${freeNote}</td>`;
     html += '</tr>';
   });
 
@@ -1119,12 +1132,17 @@ const renderMonthlyBreakdown = () => {
   html += `<td style="padding:8px;text-align:right;color:#dc2626">-${formatMoney(totalExpense)}</td>`;
   html += `<td style="padding:8px;text-align:right;color:${totalNetColor}">${totalNet >= 0 ? '+' : ''}${formatMoney(totalNet)}</td>`;
   html += `<td style="padding:8px;text-align:right;color:${finalEndColor}">${formatMoney(finalEnd)}</td>`;
+  html += '<td style="padding:8px"></td>';
   html += '</tr>';
 
   html += '</tbody></table></div>';
+  html += `<p class="muted" style="font-size:12px;margin-top:8px"><strong>Free</strong> = ending balance minus next month's scheduled expenses — money not already spoken for by upcoming bills.</p>`;
   if (months.length && months[0].impliedOpening) {
     const balDateStr = balStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    html += `<p class="muted" style="font-size:12px;margin-top:8px">* Opening balance is implied because your balance was recorded on ${balDateStr} (mid-month). Income/expenses for that month show all transactions; the ending balance reflects your stated balance plus post-${balDateStr} activity.</p>`;
+    html += `<p class="muted" style="font-size:12px;margin-top:4px">* Opening balance is implied because your balance was recorded on ${balDateStr} (mid-month). Income/expenses for that month show all transactions; the ending balance reflects your stated balance plus post-${balDateStr} activity.</p>`;
+  }
+  if (months.length) {
+    html += `<p class="muted" style="font-size:12px;margin-top:4px">† Last month in range — no next-month expenses to deduct; Free equals Ending.</p>`;
   }
   breakdownContent.innerHTML = html;
 };
@@ -1981,7 +1999,9 @@ const applyLoansVisibility = () => {
   toggleLoansSection.checked = visible;
 };
 toggleLoansSection.addEventListener('change', () => {
-  localStorage.setItem(LOANS_VISIBLE_KEY, toggleLoansSection.checked ? '1' : '0');
+  const val = toggleLoansSection.checked ? '1' : '0';
+  localStorage.setItem(LOANS_VISIBLE_KEY, val);
+  window.cloudSync?.saveSetting(LOANS_VISIBLE_KEY, val);
   applyLoansVisibility();
 });
 applyLoansVisibility();
@@ -2014,6 +2034,7 @@ const startTitleEdit = () => {
     appTitle.textContent = newVal;
     if (commit && newVal !== current) {
       localStorage.setItem(APP_TITLE_KEY, newVal);
+      window.cloudSync?.saveSetting(APP_TITLE_KEY, newVal);
       document.title = newVal;
     }
   };
