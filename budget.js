@@ -1090,20 +1090,16 @@ const renderMonthlyBreakdown = () => {
   html += '<th style="padding:8px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase">Opening</th>';
   html += '<th style="padding:8px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase">Income</th>';
   html += '<th style="padding:8px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase">Expenses</th>';
-  html += '<th style="padding:8px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase">Net</th>';
   html += '<th style="padding:8px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase">Ending</th>';
-  html += '<th style="padding:8px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase" title="Ending balance minus next month\'s scheduled expenses — money not already spoken for">Free</th>';
+  html += '<th style="padding:8px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase" title="Income minus expenses for this month only — money left over after paying this month\'s bills">Free</th>';
   html += '</tr></thead><tbody>';
 
   let totalIncome = 0, totalExpense = 0;
   months.forEach((mo, idx) => {
     totalIncome += mo.income;
     totalExpense += mo.expense;
-    const net = mo.income - mo.expense;
-    const nextMonthExpense = idx + 1 < months.length ? months[idx + 1].expense : 0;
-    const free = mo.ending - nextMonthExpense;
+    const free = mo.income - mo.expense;
     const endColor = mo.ending < 0 ? '#dc2626' : '#16a34a';
-    const netColor = net < 0 ? '#dc2626' : (net > 0 ? '#16a34a' : 'var(--muted)');
     const freeColor = free < 0 ? '#dc2626' : (free > 0 ? '#16a34a' : 'var(--muted)');
     const isCurrent = mo.key === todayKey;
     const rowStyle = isCurrent ? 'background:#dbeafe;border-left:4px solid #2563eb' : (mo.ending < 0 ? 'background:#fef2f2' : '');
@@ -1114,15 +1110,13 @@ const renderMonthlyBreakdown = () => {
     html += `<td style="padding:8px;text-align:right;border-bottom:1px solid var(--border)">${formatMoney(mo.opening)}${openingMark}</td>`;
     html += `<td style="padding:8px;text-align:right;color:#16a34a;border-bottom:1px solid var(--border)">${mo.income > 0 ? '+' + formatMoney(mo.income) : formatMoney(0)}</td>`;
     html += `<td style="padding:8px;text-align:right;color:#dc2626;border-bottom:1px solid var(--border)">${mo.expense > 0 ? '-' + formatMoney(mo.expense) : formatMoney(0)}</td>`;
-    html += `<td style="padding:8px;text-align:right;color:${netColor};font-weight:600;border-bottom:1px solid var(--border)">${net >= 0 ? '+' : ''}${formatMoney(net)}</td>`;
     html += `<td style="padding:8px;text-align:right;color:${endColor};font-weight:700;border-bottom:1px solid var(--border)">${formatMoney(mo.ending)}</td>`;
-    const freeNote = idx + 1 < months.length ? '' : '<sup style="color:var(--muted);font-weight:400" title="No further months in range">†</sup>';
-    html += `<td style="padding:8px;text-align:right;color:${freeColor};font-weight:700;border-bottom:1px solid var(--border)">${formatMoney(free)}${freeNote}</td>`;
+    html += `<td style="padding:8px;text-align:right;color:${freeColor};font-weight:700;border-bottom:1px solid var(--border)">${free >= 0 ? '+' : ''}${formatMoney(free)}</td>`;
     html += '</tr>';
   });
 
-  const totalNet = totalIncome - totalExpense;
-  const totalNetColor = totalNet < 0 ? '#dc2626' : '#16a34a';
+  const totalFree = totalIncome - totalExpense;
+  const totalFreeColor = totalFree < 0 ? '#dc2626' : '#16a34a';
   const finalEnd = months.length ? months[months.length - 1].ending : Number(state.startingBalance || 0);
   const finalEndColor = finalEnd < 0 ? '#dc2626' : '#16a34a';
   html += '<tr style="background:#f1f5f9;font-weight:700">';
@@ -1130,19 +1124,15 @@ const renderMonthlyBreakdown = () => {
   html += '<td style="padding:8px"></td>';
   html += `<td style="padding:8px;text-align:right;color:#16a34a">+${formatMoney(totalIncome)}</td>`;
   html += `<td style="padding:8px;text-align:right;color:#dc2626">-${formatMoney(totalExpense)}</td>`;
-  html += `<td style="padding:8px;text-align:right;color:${totalNetColor}">${totalNet >= 0 ? '+' : ''}${formatMoney(totalNet)}</td>`;
   html += `<td style="padding:8px;text-align:right;color:${finalEndColor}">${formatMoney(finalEnd)}</td>`;
-  html += '<td style="padding:8px"></td>';
+  html += `<td style="padding:8px;text-align:right;color:${totalFreeColor}">${totalFree >= 0 ? '+' : ''}${formatMoney(totalFree)}</td>`;
   html += '</tr>';
 
   html += '</tbody></table></div>';
-  html += `<p class="muted" style="font-size:12px;margin-top:8px"><strong>Free</strong> = ending balance minus next month's scheduled expenses — money not already spoken for by upcoming bills.</p>`;
+  html += `<p class="muted" style="font-size:12px;margin-top:8px"><strong>Free</strong> = this month's income minus this month's expenses — what's left over after paying all scheduled bills, ignoring your running balance.</p>`;
   if (months.length && months[0].impliedOpening) {
     const balDateStr = balStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     html += `<p class="muted" style="font-size:12px;margin-top:4px">* Opening balance is implied because your balance was recorded on ${balDateStr} (mid-month). Income/expenses for that month show all transactions; the ending balance reflects your stated balance plus post-${balDateStr} activity.</p>`;
-  }
-  if (months.length) {
-    html += `<p class="muted" style="font-size:12px;margin-top:4px">† Last month in range — no next-month expenses to deduct; Free equals Ending.</p>`;
   }
   breakdownContent.innerHTML = html;
 };
