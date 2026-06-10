@@ -1100,8 +1100,8 @@ const renderMonthlyBreakdown = () => {
   months.forEach((mo, idx) => {
     totalIncome += mo.income;
     totalExpense += mo.expense;
-    const nextMonthExpense = idx + 1 < months.length ? months[idx + 1].expense : 0;
-    const free = mo.opening + mo.income - mo.expense - nextMonthExpense;
+    const nextMo = idx + 1 < months.length ? months[idx + 1] : null;
+    const free = nextMo ? mo.ending + nextMo.income - nextMo.expense : mo.ending;
     const endColor = mo.ending < 0 ? '#dc2626' : '#16a34a';
     const freeColor = free < 0 ? '#dc2626' : (free > 0 ? '#16a34a' : 'var(--muted)');
     const isCurrent = mo.key === todayKey;
@@ -1132,7 +1132,7 @@ const renderMonthlyBreakdown = () => {
   html += '</tr>';
 
   html += '</tbody></table></div>';
-  html += `<p class="muted" style="font-size:12px;margin-top:8px"><strong>Free</strong> = opening + income − this month's expenses − next month's bills. What's left that isn't already spoken for.</p>`;
+  html += `<p class="muted" style="font-size:12px;margin-top:8px"><strong>Free</strong> = this month's ending balance + next month's income − next month's expenses. What's left after next month's bills are fully covered.</p>`;
   if (months.length && months[0].impliedOpening) {
     const balDateStr = balStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     html += `<p class="muted" style="font-size:12px;margin-top:4px">* Opening balance is implied because your balance was recorded on ${balDateStr} (mid-month). Income/expenses for that month show all transactions; the ending balance reflects your stated balance plus post-${balDateStr} activity.</p>`;
@@ -1147,17 +1147,18 @@ const renderMonthlyBreakdown = () => {
       dbg.style.cssText = 'margin-top:20px;padding:12px;background:#fefce8;border:2px solid #ca8a04;border-radius:8px;font-size:12px';
       let dbgHtml = '<strong style="font-size:13px">Breakdown Debug: June – August</strong>';
       debugMonths.forEach((mo, idx) => {
-        const nextExp = idx + 1 < months.length ? months[idx + 1].expense : 0;
-        const free = mo.opening + mo.income - mo.expense - nextExp;
+        const nextMoDbg = idx + 1 < months.length ? months[idx + 1] : null;
+        const free = nextMoDbg ? mo.ending + nextMoDbg.income - nextMoDbg.expense : mo.ending;
         const moLabel = mo.date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        const nextLabel = nextMoDbg ? nextMoDbg.date.toLocaleDateString('en-US', { month: 'long' }) : null;
         dbgHtml += `<div style="margin-top:10px;border-top:1px solid #ca8a04;padding-top:8px">`;
         dbgHtml += `<strong>${moLabel}</strong><br>`;
-        dbgHtml += `Opening: ${formatMoney(mo.opening)}<br>`;
-        dbgHtml += `+ Income: ${formatMoney(mo.income)}<br>`;
-        dbgHtml += `− Expenses: ${formatMoney(mo.expense)}<br>`;
-        dbgHtml += `= Ending: ${formatMoney(mo.ending)}<br>`;
-        dbgHtml += `− Next month bills: ${formatMoney(nextExp)}<br>`;
-        dbgHtml += `= <strong>Free: ${formatMoney(free)}</strong><br>`;
+        dbgHtml += `Ending balance: ${formatMoney(mo.ending)}<br>`;
+        if (nextMoDbg) {
+          dbgHtml += `+ ${nextLabel} income: ${formatMoney(nextMoDbg.income)}<br>`;
+          dbgHtml += `− ${nextLabel} expenses: ${formatMoney(nextMoDbg.expense)}<br>`;
+        }
+        dbgHtml += `= <strong>Free: ${formatMoney(free)}</strong>${nextMoDbg ? '' : ' (last month, no next month data)'}<br>`;
         dbgHtml += '<div style="margin-top:6px"><table style="width:100%;border-collapse:collapse">';
         dbgHtml += '<tr style="background:#fef9c3"><td style="padding:2px 4px"><b>Date</b></td><td style="padding:2px 4px"><b>Name</b></td><td style="padding:2px 4px;text-align:right"><b>Amount</b></td><td style="padding:2px 4px"><b>Type</b></td><td style="padding:2px 4px"><b>Post-bal?</b></td><td style="padding:2px 4px;text-align:right"><b>Running Bal</b></td></tr>';
         const txns = mo.txns || [];
