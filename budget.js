@@ -1098,7 +1098,8 @@ const renderMonthlyBreakdown = () => {
   months.forEach((mo, idx) => {
     totalIncome += mo.income;
     totalExpense += mo.expense;
-    const free = mo.opening + mo.income - mo.expense;
+    const nextMonthExpense = idx + 1 < months.length ? months[idx + 1].expense : 0;
+    const free = mo.opening + mo.income - mo.expense - nextMonthExpense;
     const endColor = mo.ending < 0 ? '#dc2626' : '#16a34a';
     const freeColor = free < 0 ? '#dc2626' : (free > 0 ? '#16a34a' : 'var(--muted)');
     const isCurrent = mo.key === todayKey;
@@ -1129,7 +1130,7 @@ const renderMonthlyBreakdown = () => {
   html += '</tr>';
 
   html += '</tbody></table></div>';
-  html += `<p class="muted" style="font-size:12px;margin-top:8px"><strong>Free</strong> = opening balance + income − expenses for the month — what you actually have left after all bills are paid.</p>`;
+  html += `<p class="muted" style="font-size:12px;margin-top:8px"><strong>Free</strong> = opening + income − this month's expenses − next month's bills. What's left that isn't already spoken for.</p>`;
   if (months.length && months[0].impliedOpening) {
     const balDateStr = balStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     html += `<p class="muted" style="font-size:12px;margin-top:4px">* Opening balance is implied because your balance was recorded on ${balDateStr} (mid-month). Income/expenses for that month show all transactions; the ending balance reflects your stated balance plus post-${balDateStr} activity.</p>`;
