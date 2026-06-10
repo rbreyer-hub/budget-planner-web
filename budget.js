@@ -1159,15 +1159,20 @@ const renderMonthlyBreakdown = () => {
         dbgHtml += `− Next month bills: ${formatMoney(nextExp)}<br>`;
         dbgHtml += `= <strong>Free: ${formatMoney(free)}</strong><br>`;
         dbgHtml += '<div style="margin-top:6px"><table style="width:100%;border-collapse:collapse">';
-        dbgHtml += '<tr style="background:#fef9c3"><td style="padding:2px 4px"><b>Date</b></td><td style="padding:2px 4px"><b>Name</b></td><td style="padding:2px 4px;text-align:right"><b>Amount</b></td><td style="padding:2px 4px"><b>Type</b></td><td style="padding:2px 4px"><b>Post-bal?</b></td></tr>';
+        dbgHtml += '<tr style="background:#fef9c3"><td style="padding:2px 4px"><b>Date</b></td><td style="padding:2px 4px"><b>Name</b></td><td style="padding:2px 4px;text-align:right"><b>Amount</b></td><td style="padding:2px 4px"><b>Type</b></td><td style="padding:2px 4px"><b>Post-bal?</b></td><td style="padding:2px 4px;text-align:right"><b>Running Bal</b></td></tr>';
         const txns = mo.txns || [];
+        let runningBal = mo.opening;
+        dbgHtml += `<tr style="background:#fef9c3"><td colspan="5" style="padding:2px 4px;font-style:italic">Opening</td><td style="padding:2px 4px;text-align:right;font-weight:700">${formatMoney(runningBal)}</td></tr>`;
         txns.forEach(t => {
+          if (t.isPostBalance) runningBal += t.type === 'income' ? t.amount : -t.amount;
           const sign = t.type === 'income' ? '+' : '-';
           const color = t.type === 'income' ? '#16a34a' : '#dc2626';
+          const balColor = runningBal < 0 ? '#dc2626' : '#16a34a';
           const ds = t.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          dbgHtml += `<tr><td style="padding:2px 4px">${ds}</td><td style="padding:2px 4px">${t.name}</td><td style="padding:2px 4px;text-align:right;color:${color}">${sign}${formatMoney(t.amount)}</td><td style="padding:2px 4px">${t.type}</td><td style="padding:2px 4px">${t.isPostBalance ? 'yes' : '<em>no (pre-bal)</em>'}</td></tr>`;
+          const preNote = t.isPostBalance ? '' : ' <em style="color:#888">(pre-bal, not added)</em>';
+          dbgHtml += `<tr><td style="padding:2px 4px">${ds}</td><td style="padding:2px 4px">${t.name}${preNote}</td><td style="padding:2px 4px;text-align:right;color:${color}">${sign}${formatMoney(t.amount)}</td><td style="padding:2px 4px">${t.type}</td><td style="padding:2px 4px">${t.isPostBalance ? 'yes' : 'no'}</td><td style="padding:2px 4px;text-align:right;font-weight:700;color:${balColor}">${formatMoney(runningBal)}</td></tr>`;
         });
-        if (!txns.length) dbgHtml += '<tr><td colspan="5" style="padding:4px;color:#888">No transactions</td></tr>';
+        if (!txns.length) dbgHtml += '<tr><td colspan="6" style="padding:4px;color:#888">No transactions</td></tr>';
         dbgHtml += '</table></div></div>';
       });
       dbg.innerHTML = dbgHtml;
