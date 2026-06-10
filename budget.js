@@ -1133,37 +1133,49 @@ const renderMonthlyBreakdown = () => {
 
   html += '</tbody></table></div>';
   html += `<p class="muted" style="font-size:12px;margin-top:8px"><strong>Free</strong> = opening + income − this month's expenses − next month's bills. What's left that isn't already spoken for.</p>`;
-
-  /* ── Debug detail for first 3 months ── */
-  const debugMonths = months.slice(0, 3);
-  if (debugMonths.length) {
-    html += '<details style="margin-top:16px"><summary style="cursor:pointer;font-weight:600;font-size:13px">Debug: Transaction Detail (first 3 months)</summary>';
-    debugMonths.forEach((mo, idx) => {
-      const nextExp = idx + 1 < months.length ? months[idx + 1].expense : 0;
-      const free = mo.opening + mo.income - mo.expense - nextExp;
-      const moLabel = mo.date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      html += `<div style="margin-top:12px;border:1px solid var(--border);border-radius:6px;padding:10px;font-size:12px">`;
-      html += `<strong>${moLabel}</strong><br>`;
-      html += `Opening: ${formatMoney(mo.opening)} | Income: +${formatMoney(mo.income)} | Expenses: -${formatMoney(mo.expense)} | Ending: ${formatMoney(mo.ending)}<br>`;
-      html += `Next month expenses: -${formatMoney(nextExp)} | <strong>Free: ${formatMoney(free)}</strong><br><br>`;
-      html += '<table style="width:100%;border-collapse:collapse">';
-      html += '<tr><th style="text-align:left;padding:3px 6px;font-size:11px;color:var(--muted)">Date</th><th style="text-align:left;padding:3px 6px;font-size:11px;color:var(--muted)">Name</th><th style="text-align:right;padding:3px 6px;font-size:11px;color:var(--muted)">Amount</th><th style="text-align:left;padding:3px 6px;font-size:11px;color:var(--muted)">Type</th><th style="text-align:left;padding:3px 6px;font-size:11px;color:var(--muted)">Post-bal?</th></tr>';
-      (mo.txns || []).forEach(t => {
-        const color = t.type === 'income' ? '#16a34a' : '#dc2626';
-        const sign = t.type === 'income' ? '+' : '-';
-        const ds = t.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        html += `<tr><td style="padding:2px 6px">${ds}</td><td style="padding:2px 6px">${t.name}</td><td style="padding:2px 6px;text-align:right;color:${color}">${sign}${formatMoney(t.amount)}</td><td style="padding:2px 6px">${t.type}</td><td style="padding:2px 6px">${t.isPostBalance ? 'yes' : 'no (pre-bal)'}</td></tr>`;
-      });
-      if (!(mo.txns || []).length) html += '<tr><td colspan="5" style="padding:4px 6px;color:var(--muted)">No transactions</td></tr>';
-      html += '</table></div>';
-    });
-    html += '</details>';
-  }
   if (months.length && months[0].impliedOpening) {
     const balDateStr = balStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     html += `<p class="muted" style="font-size:12px;margin-top:4px">* Opening balance is implied because your balance was recorded on ${balDateStr} (mid-month). Income/expenses for that month show all transactions; the ending balance reflects your stated balance plus post-${balDateStr} activity.</p>`;
   }
   breakdownContent.innerHTML = html;
+
+  /* ── Debug detail for first 3 months (appended after main render) ── */
+  try {
+    const debugMonths = months.slice(0, 3);
+    if (debugMonths.length) {
+      const dbg = document.createElement('div');
+      dbg.style.cssText = 'margin-top:20px;padding:12px;background:#fefce8;border:2px solid #ca8a04;border-radius:8px;font-size:12px';
+      let dbgHtml = '<strong style="font-size:13px">Breakdown Debug: June – August</strong>';
+      debugMonths.forEach((mo, idx) => {
+        const nextExp = idx + 1 < months.length ? months[idx + 1].expense : 0;
+        const free = mo.opening + mo.income - mo.expense - nextExp;
+        const moLabel = mo.date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        dbgHtml += `<div style="margin-top:10px;border-top:1px solid #ca8a04;padding-top:8px">`;
+        dbgHtml += `<strong>${moLabel}</strong><br>`;
+        dbgHtml += `Opening: ${formatMoney(mo.opening)}<br>`;
+        dbgHtml += `+ Income: ${formatMoney(mo.income)}<br>`;
+        dbgHtml += `− Expenses: ${formatMoney(mo.expense)}<br>`;
+        dbgHtml += `= Ending: ${formatMoney(mo.ending)}<br>`;
+        dbgHtml += `− Next month bills: ${formatMoney(nextExp)}<br>`;
+        dbgHtml += `= <strong>Free: ${formatMoney(free)}</strong><br>`;
+        dbgHtml += '<div style="margin-top:6px"><table style="width:100%;border-collapse:collapse">';
+        dbgHtml += '<tr style="background:#fef9c3"><td style="padding:2px 4px"><b>Date</b></td><td style="padding:2px 4px"><b>Name</b></td><td style="padding:2px 4px;text-align:right"><b>Amount</b></td><td style="padding:2px 4px"><b>Type</b></td><td style="padding:2px 4px"><b>Post-bal?</b></td></tr>';
+        const txns = mo.txns || [];
+        txns.forEach(t => {
+          const sign = t.type === 'income' ? '+' : '-';
+          const color = t.type === 'income' ? '#16a34a' : '#dc2626';
+          const ds = t.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          dbgHtml += `<tr><td style="padding:2px 4px">${ds}</td><td style="padding:2px 4px">${t.name}</td><td style="padding:2px 4px;text-align:right;color:${color}">${sign}${formatMoney(t.amount)}</td><td style="padding:2px 4px">${t.type}</td><td style="padding:2px 4px">${t.isPostBalance ? 'yes' : '<em>no (pre-bal)</em>'}</td></tr>`;
+        });
+        if (!txns.length) dbgHtml += '<tr><td colspan="5" style="padding:4px;color:#888">No transactions</td></tr>';
+        dbgHtml += '</table></div></div>';
+      });
+      dbg.innerHTML = dbgHtml;
+      breakdownContent.appendChild(dbg);
+    }
+  } catch(e) {
+    console.error('Debug breakdown error:', e);
+  }
 };
 
 /* ── Full refresh (tab switch) ── */
