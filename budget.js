@@ -542,7 +542,6 @@ const calculateCurrentBalance = () => {
   const balStart = startOfDay(toDate(state.balanceDate));
   let bal = Number(state.startingBalance || 0);
   const walker = new Date(balStart);
-  walker.setDate(walker.getDate() + 1);
   while (walker <= today) {
     const txns = getTransactionsForDay(walker);
     txns.forEach(t => { bal += t.type === 'income' ? t.amount : -t.amount; });
@@ -566,7 +565,6 @@ const calculateEndingBalance = () => {
   const bd = toDate(state.balanceDate), cd = toDate(state.checkDate);
   let running = balance;
   const cursor = new Date(bd);
-  cursor.setDate(cursor.getDate() + 1);
   while (cursor <= cd) {
     const txns = getTransactionsForDay(cursor);
     txns.forEach(t => { running += t.type==="income" ? t.amount : -t.amount; });
@@ -585,7 +583,6 @@ const calculateEndingBalance = () => {
   let runBal = Number(state.startingBalance || 0);
   const balStart = startOfDay(toDate(state.balanceDate));
   const walker = new Date(balStart);
-  walker.setDate(walker.getDate() + 1);
   while (walker < todayLocal) {
     const wTxns = getTransactionsForDay(walker);
     wTxns.forEach(t => { runBal += t.type === 'income' ? t.amount : -t.amount; });
@@ -807,7 +804,6 @@ const renderNegativeAlert = () => {
   let running = Number(state.startingBalance || 0);
   const balD = startOfDay(toDate(state.balanceDate));
   const walkStart = new Date(balD);
-  walkStart.setDate(walkStart.getDate() + 1);
 
   if (walkStart < monthStart) {
     const cursor2 = new Date(walkStart);
@@ -902,7 +898,6 @@ const renderMonthlyExpenseSummary = () => {
   let runBal = Number(state.startingBalance || 0);
   const balStart = startOfDay(toDate(state.balanceDate));
   const walkStart2 = new Date(balStart);
-  walkStart2.setDate(walkStart2.getDate() + 1);
 
   if (walkStart2 < monthStart) {
     const pre = new Date(walkStart2);
@@ -1055,7 +1050,7 @@ const renderMonthlyBreakdown = () => {
       currentMonthIdx = months.length - 1;
     }
     const txns = getTransactionsForDay(cursor);
-    const isPostBalance = cursor > balStart;
+    const isPostBalance = cursor >= balStart;
     if (!months[currentMonthIdx].txns) months[currentMonthIdx].txns = [];
     txns.forEach(t => {
       months[currentMonthIdx].txns.push({ date: new Date(cursor), ...t, isPostBalance });
@@ -1140,6 +1135,7 @@ const renderMonthlyBreakdown = () => {
   breakdownContent.innerHTML = html;
 
   /* ── Debug detail for first 3 months (appended after main render) ── */
+  if (!window._showBreakdownDebug) return;
   try {
     const debugMonths = months.slice(0, 3);
     if (debugMonths.length) {
@@ -2042,6 +2038,15 @@ toggleLoansSection.addEventListener('change', () => {
   applyLoansVisibility();
 });
 applyLoansVisibility();
+
+/* ── Debug breakdown toggle ── */
+const toggleDebugSection = document.getElementById('toggleDebugSection');
+if (toggleDebugSection) {
+  toggleDebugSection.addEventListener('change', () => {
+    window._showBreakdownDebug = toggleDebugSection.checked;
+    renderMonthlyBreakdown();
+  });
+}
 
 /* ── Editable app title ── */
 const APP_TITLE_KEY = 'budgetPlanner.appTitle';
