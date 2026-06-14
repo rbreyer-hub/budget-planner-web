@@ -468,12 +468,27 @@ p  { margin: 0; }
   transition: background 0.15s;
 }
 .planner-header h3:hover { background: rgba(0,0,0,0.04); }
-.optional-sections {
-  display: flex; gap: 14px; align-items: center; font-size: 13px;
-  background: rgba(0,0,0,0.04); padding: 8px 14px; border-radius: 8px;
-  flex-wrap: wrap;
+.settings-cog-wrap { position: relative; }
+.settings-cog-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 22px; color: var(--p-muted); padding: 4px 8px; border-radius: 6px;
+  line-height: 1; transition: color 0.15s, background 0.15s;
+  display: flex; align-items: center; justify-content: center;
 }
-.optional-label { color: var(--p-muted); }
+.settings-cog-btn:hover, .settings-cog-btn.active {
+  color: var(--p-text); background: rgba(0,0,0,0.07);
+}
+.settings-dropdown {
+  display: none; position: absolute; right: 0; top: calc(100% + 6px);
+  background: var(--p-card); border: 1px solid var(--p-border);
+  border-radius: 10px; padding: 14px 16px; min-width: 220px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1); z-index: 100;
+}
+.settings-dropdown.open { display: block; }
+.settings-dropdown-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--p-muted); margin-bottom: 10px;
+}
 .toggle-label {
   display: inline-flex; gap: 6px; align-items: center;
   font-size: 13px; color: var(--p-text); margin: 0; cursor: pointer;

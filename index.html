@@ -129,12 +129,15 @@
     <div class="planner-shell">
       <div class="planner-header">
         <h3 id="appTitle" title="Click to edit" tabindex="0">Budget Planner</h3>
-        <div id="optionalSections" class="optional-sections">
-          <span class="optional-label">Optional sections:</span>
-          <label class="toggle-label">
-            <input type="checkbox" id="toggleLoansSection" />
-            Loans from Other Accounts
-          </label>
+        <div class="settings-cog-wrap" id="settingsCogWrap">
+          <button class="settings-cog-btn" id="settingsCogBtn" aria-label="Settings" title="Settings">&#9881;</button>
+          <div class="settings-dropdown" id="settingsDropdown">
+            <div class="settings-dropdown-title">Optional Sections</div>
+            <label class="toggle-label">
+              <input type="checkbox" id="toggleLoansSection" />
+              Loans from Other Accounts
+            </label>
+          </div>
         </div>
       </div>
 
@@ -499,6 +502,22 @@
       entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
     }, { threshold: 0.12 });
     document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+    const cogBtn = document.getElementById('settingsCogBtn');
+    const cogDropdown = document.getElementById('settingsDropdown');
+    if (cogBtn && cogDropdown) {
+      cogBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = cogDropdown.classList.toggle('open');
+        cogBtn.classList.toggle('active', open);
+      });
+      document.addEventListener('click', (e) => {
+        if (!document.getElementById('settingsCogWrap')?.contains(e.target)) {
+          cogDropdown.classList.remove('open');
+          cogBtn.classList.remove('active');
+        }
+      });
+    }
   })();
 </script>
 </body>
