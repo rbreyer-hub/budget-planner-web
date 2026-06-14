@@ -514,6 +514,9 @@
         }
       });
     }
+    if (localStorage.getItem('budgetProfiles')) {
+      document.getElementById('planner')?.scrollIntoView({ behavior: 'instant' });
+    }
   })();
 </script>
 </body>
