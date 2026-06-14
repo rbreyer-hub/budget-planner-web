@@ -355,14 +355,11 @@ const renderIncidentals = () => {
   let grandTotal = 0;
   let currentMonthTotal = 0;
 
-  const historyCard = document.getElementById('incidentalHistoryCard');
   if (!sortedKeys.length) {
-    container.innerHTML = '';
+    container.innerHTML = '<p class="muted" style="text-align:center">No incidental payments yet.</p>';
     elements.incidentalSummary.style.display = "none";
-    if (historyCard) historyCard.style.display = 'none';
     return;
   }
-  if (historyCard) historyCard.style.display = '';
 
   sortedKeys.forEach(mk => {
     const currentItems = grouped[mk] || [];
