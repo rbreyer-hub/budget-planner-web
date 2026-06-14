@@ -33,12 +33,13 @@
 */
 
 const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  apiKey:            "AIzaSyDwagvEPiQDLre2k6rku_pkwyKcBOxBnwE",
+  authDomain:        "budget-planner-fb.firebaseapp.com",
+  projectId:         "budget-planner-fb",
+  storageBucket:     "budget-planner-fb.firebasestorage.app",
+  messagingSenderId: "682449918354",
+  appId:             "1:682449918354:web:c132bcec3976ce1988094b",
+  measurementId:     "G-T72R093NMS"
 };
 
 firebase.initializeApp(firebaseConfig);
