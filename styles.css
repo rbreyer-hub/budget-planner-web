@@ -468,27 +468,47 @@ p  { margin: 0; }
   transition: background 0.15s;
 }
 .planner-header h3:hover { background: rgba(0,0,0,0.04); }
-.settings-cog-wrap { position: relative; }
-.settings-cog-btn {
-  background: none; border: none; cursor: pointer;
-  font-size: 22px; color: var(--p-muted); padding: 4px 8px; border-radius: 6px;
-  line-height: 1; transition: color 0.15s, background 0.15s;
-  display: flex; align-items: center; justify-content: center;
+.nav-config-wrap { position: relative; }
+.nav-config-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  background: var(--surface-2); border: 1px solid var(--border-2);
+  border-radius: 8px; color: var(--text);
+  font-size: 0.88rem; font-weight: 500; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s; white-space: nowrap;
 }
-.settings-cog-btn:hover, .settings-cog-btn.active {
-  color: var(--p-text); background: rgba(0,0,0,0.07);
+.nav-config-btn:hover, .nav-config-btn.active {
+  background: var(--surface); border-color: var(--accent);
 }
-.settings-dropdown {
-  display: none; position: absolute; right: 0; top: calc(100% + 6px);
-  background: var(--p-card); border: 1px solid var(--p-border);
-  border-radius: 10px; padding: 14px 16px; min-width: 220px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1); z-index: 100;
+.nav-config-dropdown {
+  display: none; position: absolute; right: 0; top: calc(100% + 10px);
+  background: var(--surface-2); border: 1px solid var(--border-2);
+  border-radius: 12px; padding: 16px; min-width: 220px;
+  box-shadow: var(--shadow-1); z-index: 200;
 }
-.settings-dropdown.open { display: block; }
-.settings-dropdown-title {
+.nav-config-dropdown.open { display: block; }
+.config-section-title {
   font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.08em; color: var(--p-muted); margin-bottom: 10px;
+  letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px;
 }
+.nav-toggle-label {
+  display: inline-flex; gap: 8px; align-items: center;
+  font-size: 13px; color: var(--text); cursor: pointer;
+}
+.nav-toggle-label input[type=checkbox] { width: auto; margin: 0; cursor: pointer; }
+.config-btn-group { display: flex; flex-direction: column; gap: 6px; }
+.config-action-btn {
+  display: block; width: 100%; text-align: left;
+  padding: 8px 12px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); font-size: 0.88rem; font-family: inherit;
+  cursor: pointer; transition: background 0.15s, border-color 0.15s;
+}
+.config-action-btn:hover { background: var(--bg-2); border-color: var(--border-2); }
+.config-action-green { background: #059669; color: #fff; border-color: #059669; }
+.config-action-green:hover { background: #047857; border-color: #047857; }
+.config-action-danger { color: var(--danger); }
+.config-action-danger:hover { border-color: var(--danger); }
 .toggle-label {
   display: inline-flex; gap: 6px; align-items: center;
   font-size: 13px; color: var(--p-text); margin: 0; cursor: pointer;
