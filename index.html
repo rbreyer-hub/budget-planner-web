@@ -194,64 +194,6 @@
           <div id="billsSummary" style="margin-top: 12px;"></div>
         </div>
         <div class="card">
-          <h2>Additional Income</h2>
-          <div class="row">
-            <div>
-              <label for="depositName">Description</label>
-              <input id="depositName" type="text" placeholder="e.g. Tax refund" />
-            </div>
-            <div class="mini">
-              <label for="depositAmount">Amount</label>
-              <input id="depositAmount" type="number" step="0.01" />
-            </div>
-          </div>
-          <div class="row" style="margin-top:8px">
-            <div class="compact">
-              <label for="depositDate">Date</label>
-              <input id="depositDate" type="date" />
-            </div>
-            <div style="flex:0 0 auto; align-self:flex-end;">
-              <button id="addDeposit" style="width:auto; padding:8px 18px;">Add</button>
-            </div>
-          </div>
-          <table style="margin-top:12px">
-            <thead>
-              <tr><th>Description</th><th>Amount</th><th>Date</th><th></th></tr>
-            </thead>
-            <tbody id="depositTable"></tbody>
-          </table>
-        </div>
-        <div class="card">
-          <h2>Incidentals</h2>
-          <div class="row">
-            <div>
-              <label for="incName">Description</label>
-              <input id="incName" type="text" placeholder="e.g. Dinner out" />
-            </div>
-            <div class="mini">
-              <label for="incAmount">Amount</label>
-              <input id="incAmount" type="number" step="0.01" />
-            </div>
-          </div>
-          <div class="row" style="margin-top:8px">
-            <div class="compact">
-              <label for="incDate">Date</label>
-              <input id="incDate" type="date" />
-            </div>
-            <div style="flex:0 0 auto; align-self:flex-end;">
-              <button id="addIncidental" style="width:auto; padding:8px 18px;">Add</button>
-            </div>
-          </div>
-          <div style="margin-top:8px">
-            <label class="toggle-label" title="Check this if your current bank balance already reflects this payment. The item is logged for tracking but skipped from all balance projections.">
-              <input type="checkbox" id="incInBalance" />
-              Already in current balance
-            </label>
-          </div>
-          <div id="incidentalSummary" class="incidental-summary" style="display:none"></div>
-          <div id="incidentalGroups" style="margin-top:12px"></div>
-        </div>
-        <div class="card">
           <h2>Quick Add Bill / Expense</h2>
           <div class="row">
             <div>
@@ -295,6 +237,68 @@
             <button id="addBill">Add bill</button>
           </div>
         </div>
+      </section>
+
+      <section class="card">
+        <div class="row" style="align-items:flex-end;">
+          <h2 style="margin:0;flex:1">Additional Income / Deposits</h2>
+        </div>
+        <p class="muted">One-time income entries. <strong>Remove</strong> = delete &amp; keep balance impact. <strong>Cancel</strong> = delete as if it never happened.</p>
+        <div class="row" style="margin-top:12px">
+          <div>
+            <label for="depositName">Description</label>
+            <input id="depositName" type="text" placeholder="e.g. Tax refund" />
+          </div>
+          <div class="mini">
+            <label for="depositAmount">Amount</label>
+            <input id="depositAmount" type="number" step="0.01" />
+          </div>
+          <div class="compact">
+            <label for="depositDate">Date</label>
+            <input id="depositDate" type="date" />
+          </div>
+          <div style="flex:0 0 auto;align-self:flex-end;">
+            <button id="addDeposit" style="width:auto;padding:8px 18px;">Add</button>
+          </div>
+        </div>
+        <table style="margin-top:12px">
+          <thead>
+            <tr><th>Description</th><th>Amount</th><th>Date</th><th></th></tr>
+          </thead>
+          <tbody id="depositTable"></tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <div class="row" style="align-items:flex-end;">
+          <h2 style="margin:0;flex:1">Incidental One-Time Payments</h2>
+        </div>
+        <p class="muted">Track unplanned, one-time expenses (eating out, impulse buys, etc.). Past months auto-archive but still count toward your balance.</p>
+        <div class="row" style="margin-top:12px">
+          <div>
+            <label for="incName">Description</label>
+            <input id="incName" type="text" placeholder="e.g. Dinner out" />
+          </div>
+          <div class="mini">
+            <label for="incAmount">Amount</label>
+            <input id="incAmount" type="number" step="0.01" />
+          </div>
+          <div class="compact">
+            <label for="incDate">Date</label>
+            <input id="incDate" type="date" />
+          </div>
+          <div style="flex:0 0 auto;align-self:flex-end;">
+            <button id="addIncidental" style="width:auto;padding:8px 18px;">Add</button>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <label class="toggle-label" title="Check this if your current bank balance already reflects this payment. The item is logged for tracking but skipped from all balance projections.">
+            <input type="checkbox" id="incInBalance" />
+            Already in current balance (record only &mdash; don't subtract)
+          </label>
+        </div>
+        <div id="incidentalSummary" class="incidental-summary" style="display:none"></div>
+        <div id="incidentalGroups" style="margin-top:12px"></div>
       </section>
 
       <section class="card" id="negativeAlertCard" style="display:none">
