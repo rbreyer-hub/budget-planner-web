@@ -2092,6 +2092,118 @@ appTitle.addEventListener('keydown', (e) => {
 });
 applyAppTitle();
 
+/* ── Quick Expenses ── */
+const QUICK_EXPENSES_KEY = 'budgetPlanner.quickExpenses';
+const DEFAULT_QUICK_EXPENSES = [
+  { id: 'qe-groceries', name: 'Groceries' },
+  { id: 'qe-gas',       name: 'Gas' },
+  { id: 'qe-snacks',    name: 'Snacks' },
+  { id: 'qe-eating',    name: 'Eating Out' },
+  { id: 'qe-coffee',    name: 'Coffee' },
+];
+
+let quickExpenses = (() => {
+  try {
+    const saved = localStorage.getItem(QUICK_EXPENSES_KEY);
+    return saved ? JSON.parse(saved) : [...DEFAULT_QUICK_EXPENSES];
+  } catch { return [...DEFAULT_QUICK_EXPENSES]; }
+})();
+
+const saveQuickExpenses = () => localStorage.setItem(QUICK_EXPENSES_KEY, JSON.stringify(quickExpenses));
+
+const renderQuickExpenseChips = () => {
+  const c = document.getElementById('quickExpenseChips');
+  if (!c) return;
+  c.innerHTML = quickExpenses.map(q =>
+    `<button class="qe-chip" data-qe-id="${q.id}">${q.name}</button>`
+  ).join('');
+};
+
+const renderManageQE = () => {
+  const list = document.getElementById('qeManageList');
+  if (!list) return;
+  list.innerHTML = quickExpenses.length
+    ? quickExpenses.map(q => `<span class="qe-manage-item">${q.name}<button data-delete-qe="${q.id}" title="Remove">&times;</button></span>`).join('')
+    : '<span style="color:var(--p-muted);font-size:13px">No quick expenses yet.</span>';
+};
+
+/* chip click → modal */
+document.getElementById('quickExpenseChips').addEventListener('click', (e) => {
+  const chip = e.target.closest('.qe-chip');
+  if (!chip) return;
+  const qe = quickExpenses.find(q => q.id === chip.dataset.qeId);
+  if (qe) openQEModal(qe.name);
+});
+
+/* modal logic */
+let _qeModalName = '';
+const openQEModal = (name) => {
+  _qeModalName = name;
+  document.getElementById('qeModalTitle').textContent = name;
+  document.getElementById('qeAmount').value = '';
+  document.getElementById('qeDate').value = todayIso;
+  document.getElementById('qeInBalance').checked = false;
+  document.getElementById('quickExpenseModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('qeAmount').focus(), 50);
+};
+const closeQEModal = () => { document.getElementById('quickExpenseModal').style.display = 'none'; };
+
+document.getElementById('qeCancel').addEventListener('click', closeQEModal);
+document.getElementById('quickExpenseModal').addEventListener('click', (e) => {
+  if (e.target.id === 'quickExpenseModal') closeQEModal();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeQEModal(); });
+
+document.getElementById('qeSubmit').addEventListener('click', () => {
+  const amount = Number(document.getElementById('qeAmount').value || 0);
+  if (!amount) { document.getElementById('qeAmount').focus(); return; }
+  const date = document.getElementById('qeDate').value || todayIso;
+  const inBalance = !!document.getElementById('qeInBalance').checked;
+  if (!state.incidentals) state.incidentals = [];
+  state.incidentals.push({ name: _qeModalName, amount, date, inBalance });
+  closeQEModal();
+  renderIncidentals(); saveState(); calculateEndingBalance(); renderNegativeAlert();
+});
+document.getElementById('qeAmount').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('qeSubmit').click();
+});
+
+/* manage panel toggle */
+document.getElementById('toggleManageQE').addEventListener('click', () => {
+  const panel = document.getElementById('manageQESection');
+  const btn = document.getElementById('toggleManageQE');
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? '' : 'none';
+  btn.textContent = open ? '− Manage Quick Expenses' : '+ Manage Quick Expenses';
+  if (open) renderManageQE();
+});
+
+/* add new quick expense type */
+const submitNewQE = () => {
+  const input = document.getElementById('newQEName');
+  const name = input.value.trim();
+  if (!name) return;
+  quickExpenses.push({ id: 'qe-' + Date.now(), name });
+  saveQuickExpenses();
+  input.value = '';
+  renderQuickExpenseChips();
+  renderManageQE();
+};
+document.getElementById('addQEBtn').addEventListener('click', submitNewQE);
+document.getElementById('newQEName').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitNewQE(); });
+
+/* delete quick expense type */
+document.getElementById('qeManageList').addEventListener('click', (e) => {
+  const id = e.target.closest('[data-delete-qe]')?.dataset.deleteQe;
+  if (!id) return;
+  quickExpenses = quickExpenses.filter(q => q.id !== id);
+  saveQuickExpenses();
+  renderQuickExpenseChips();
+  renderManageQE();
+});
+
+renderQuickExpenseChips();
+
 /* ── Boot ── */
 chrome.storage.local.get([PROFILES_KEY], (result) => {
   const raw = result[PROFILES_KEY];
