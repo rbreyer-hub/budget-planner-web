@@ -864,15 +864,16 @@ p  { margin: 0; }
 
 /* ── Quick Expense chips ── */
 .quick-expense-bar {
-  display: inline-flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 8px;
+  width: fit-content; max-width: 100%;
   padding-bottom: 14px; border-bottom: 1px solid var(--p-border);
 }
 .quick-expense-label {
   font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.07em; color: var(--p-muted); white-space: nowrap;
+  letter-spacing: 0.07em; color: var(--p-muted); white-space: nowrap; flex-shrink: 0;
 }
 .qe-select {
-  max-width: 200px; padding: 7px 10px;
+  flex: 1; min-width: 0; max-width: 200px; padding: 7px 10px;
   border: 1px solid var(--p-border); border-radius: 8px;
   font-size: 14px; font-family: inherit; color: var(--p-text);
   background: white; cursor: pointer;
@@ -1035,12 +1036,11 @@ p  { margin: 0; }
   .planner-shell table { font-size: 13px; }
   .planner-shell td[style*="white-space:nowrap"] { white-space: normal !important; }
   .planner-shell td[style*="white-space: nowrap"] { white-space: normal !important; }
-  /* misc */
-  .quick-expense-bar { gap: 8px; }
+  /* quick expense bar — go full width on mobile so select can shrink */
+  .quick-expense-bar { width: 100%; }
+  .qe-select { max-width: none; }
   .tab-bar { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
   .planner-header { flex-direction: column; align-items: flex-start; gap: 8px; }
-  /* ensure inline-flex bars don't overflow */
-  .quick-expense-bar { max-width: 100%; }
 }
 
 @media (max-width: 480px) {
@@ -1048,7 +1048,7 @@ p  { margin: 0; }
   .auth-user-name { display: none; }
   .planner-shell { padding: 12px; }
   .planner-shell .card { padding: 14px; }
-  .qe-select { max-width: 160px; font-size: 13px; }
+  .qe-select { font-size: 13px; }
 }
 
 /* ── Reduced motion ──────────────────────────────────── */
