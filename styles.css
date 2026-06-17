@@ -863,13 +863,37 @@ p  { margin: 0; }
     align-items: stretch;
   }
   .nav-toggle { display: block; }
+  .nav-config-btn { font-size: 0; padding: 7px 10px; }
+  .nav-config-btn::before { content: '⚙'; font-size: 16px; }
+  .nav-config-dropdown { right: -10px; min-width: 200px; }
   .section { padding: 70px 20px; }
   .footer-inner { grid-template-columns: 1fr; }
   .footer-copy { text-align: left; }
-  .planner-shell { padding: 18px; border-radius: var(--radius); }
+  .planner-shell { padding: 14px; border-radius: var(--radius); }
   .planner-shell .grid { grid-template-columns: 1fr; }
   .planner-shell .actions { flex-wrap: wrap; }
-  .planner-shell .tab-btn { padding: 10px 16px; font-size: 14px; }
+  .planner-shell .tab-btn { padding: 10px 12px; font-size: 13px; }
+  .planner-shell .row { flex-wrap: wrap; }
+  .planner-shell .row > div,
+  .planner-shell .row > div.mini,
+  .planner-shell .row > div.compact { flex: 1 1 100%; min-width: 0; }
+  .planner-shell .row > div[style*="flex:0 0 auto"] { flex: 1 1 100%; }
+  .planner-shell button { width: 100%; }
+  .planner-shell button[style*="width:auto"] { width: auto !important; }
+  .planner-shell table { font-size: 13px; }
+  .quick-expense-bar { gap: 8px; }
+  .qe-manage-btn { font-size: 11px; padding: 4px 8px; }
+  .tab-bar { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+  .planner-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+}
+
+@media (max-width: 480px) {
+  .nav-inner { gap: 10px; }
+  .auth-user-name { display: none; }
+  .planner-shell { padding: 12px; }
+  .planner-shell .card { padding: 14px; }
+  .qe-chip { padding: 4px 10px; font-size: 12px; }
+  .quick-expense-chips { gap: 4px; }
 }
 
 /* ── Reduced motion ──────────────────────────────────── */

@@ -2111,6 +2111,21 @@ let quickExpenses = (() => {
 
 const saveQuickExpenses = () => localStorage.setItem(QUICK_EXPENSES_KEY, JSON.stringify(quickExpenses));
 
+/* define modal open/close first so nothing references them before they exist */
+let _qeModalName = '';
+function openQEModal(name) {
+  _qeModalName = name;
+  document.getElementById('qeModalTitle').textContent = name;
+  document.getElementById('qeAmount').value = '';
+  document.getElementById('qeDate').value = todayIso;
+  document.getElementById('qeInBalance').checked = false;
+  document.getElementById('quickExpenseModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('qeAmount').focus(), 50);
+}
+function closeQEModal() {
+  document.getElementById('quickExpenseModal').style.display = 'none';
+}
+
 const renderQuickExpenseChips = () => {
   const c = document.getElementById('quickExpenseChips');
   if (!c) return;
@@ -2135,19 +2150,7 @@ document.getElementById('quickExpenseChips').addEventListener('click', (e) => {
   if (qe) openQEModal(qe.name);
 });
 
-/* modal logic */
-let _qeModalName = '';
-const openQEModal = (name) => {
-  _qeModalName = name;
-  document.getElementById('qeModalTitle').textContent = name;
-  document.getElementById('qeAmount').value = '';
-  document.getElementById('qeDate').value = todayIso;
-  document.getElementById('qeInBalance').checked = false;
-  document.getElementById('quickExpenseModal').style.display = 'flex';
-  setTimeout(() => document.getElementById('qeAmount').focus(), 50);
-};
-const closeQEModal = () => { document.getElementById('quickExpenseModal').style.display = 'none'; };
-
+/* modal buttons */
 document.getElementById('qeCancel').addEventListener('click', closeQEModal);
 document.getElementById('quickExpenseModal').addEventListener('click', (e) => {
   if (e.target.id === 'quickExpenseModal') closeQEModal();
@@ -2174,12 +2177,12 @@ document.getElementById('toggleManageQE').addEventListener('click', () => {
   const btn = document.getElementById('toggleManageQE');
   const open = panel.style.display === 'none';
   panel.style.display = open ? '' : 'none';
-  btn.textContent = open ? '− Manage Quick Expenses' : '+ Manage Quick Expenses';
+  btn.textContent = open ? '− Manage' : '+ Manage Quick Expenses';
   if (open) renderManageQE();
 });
 
 /* add new quick expense type */
-const submitNewQE = () => {
+function submitNewQE() {
   const input = document.getElementById('newQEName');
   const name = input.value.trim();
   if (!name) return;
@@ -2188,7 +2191,7 @@ const submitNewQE = () => {
   input.value = '';
   renderQuickExpenseChips();
   renderManageQE();
-};
+}
 document.getElementById('addQEBtn').addEventListener('click', submitNewQE);
 document.getElementById('newQEName').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitNewQE(); });
 
