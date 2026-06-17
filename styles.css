@@ -729,16 +729,12 @@ p  { margin: 0; }
   font-size: 11px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.07em; color: var(--p-muted); white-space: nowrap;
 }
-.quick-expense-chips { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
-.qe-chip {
-  display: inline-flex; align-items: center;
-  padding: 5px 14px; background: #f1f5f9;
-  border: 1px solid var(--p-border); border-radius: 999px;
-  font-size: 13px; color: var(--p-text); cursor: pointer;
-  font-family: inherit; font-weight: 500;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+.qe-select {
+  flex: 1; max-width: 200px; padding: 7px 10px;
+  border: 1px solid var(--p-border); border-radius: 8px;
+  font-size: 14px; font-family: inherit; color: var(--p-text);
+  background: white; cursor: pointer;
 }
-.qe-chip:hover { background: #e2e8f0; border-color: var(--p-accent); color: var(--p-accent-strong); }
 .qe-manage-btn {
   background: none; border: 1px dashed var(--p-border); border-radius: 6px;
   padding: 5px 12px; font-size: 12px; color: var(--p-muted); cursor: pointer;
@@ -746,27 +742,10 @@ p  { margin: 0; }
   transition: color 0.15s, border-color 0.15s;
 }
 .qe-manage-btn:hover { color: var(--p-accent); border-color: var(--p-accent); }
-.qe-manage {
-  background: #f8fafc; border: 1px solid var(--p-border);
-  border-radius: 8px; padding: 14px; margin-bottom: 4px;
+.qe-add-type-row {
+  display: flex; gap: 8px; margin-bottom: 8px;
 }
-.qe-manage-title {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.07em; color: var(--p-muted); margin-bottom: 10px;
-}
-.qe-manage-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; min-height: 28px; }
-.qe-manage-item {
-  display: inline-flex; align-items: center; gap: 2px;
-  background: white; border: 1px solid var(--p-border); border-radius: 999px;
-  padding: 3px 4px 3px 12px; font-size: 13px; color: var(--p-text);
-}
-.qe-manage-item button {
-  background: none; border: none; color: var(--p-muted); cursor: pointer;
-  font-size: 15px; padding: 0 4px; line-height: 1; width: auto;
-  border-radius: 50%;
-  transition: color 0.15s, background 0.15s;
-}
-.qe-manage-item button:hover { color: var(--p-danger); background: #fee2e2; }
+.qe-add-type-row input { flex: 1; }
 
 /* ── Quick Expense modal ── */
 .qe-modal-overlay {
@@ -892,8 +871,7 @@ p  { margin: 0; }
   .auth-user-name { display: none; }
   .planner-shell { padding: 12px; }
   .planner-shell .card { padding: 14px; }
-  .qe-chip { padding: 4px 10px; font-size: 12px; }
-  .quick-expense-chips { gap: 4px; }
+  .qe-select { max-width: 160px; font-size: 13px; }
 }
 
 /* ── Reduced motion ──────────────────────────────────── */

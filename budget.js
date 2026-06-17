@@ -2111,7 +2111,7 @@ let quickExpenses = (() => {
 
 const saveQuickExpenses = () => localStorage.setItem(QUICK_EXPENSES_KEY, JSON.stringify(quickExpenses));
 
-/* define modal open/close first so nothing references them before they exist */
+/* modal open/close — defined as functions so they're hoisted */
 let _qeModalName = '';
 function openQEModal(name) {
   _qeModalName = name;
@@ -2126,28 +2126,22 @@ function closeQEModal() {
   document.getElementById('quickExpenseModal').style.display = 'none';
 }
 
-const renderQuickExpenseChips = () => {
-  const c = document.getElementById('quickExpenseChips');
-  if (!c) return;
-  c.innerHTML = quickExpenses.map(q =>
-    `<button class="qe-chip" data-qe-id="${q.id}">${q.name}</button>`
-  ).join('');
+const renderQuickExpenseSelect = () => {
+  const sel = document.getElementById('quickExpenseSelect');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— select type —</option>' +
+    quickExpenses.map(q => `<option value="${q.id}">${q.name}</option>`).join('');
+  if (cur) sel.value = cur;
 };
 
-const renderManageQE = () => {
-  const list = document.getElementById('qeManageList');
-  if (!list) return;
-  list.innerHTML = quickExpenses.length
-    ? quickExpenses.map(q => `<span class="qe-manage-item">${q.name}<button data-delete-qe="${q.id}" title="Remove">&times;</button></span>`).join('')
-    : '<span style="color:var(--p-muted);font-size:13px">No quick expenses yet.</span>';
-};
-
-/* chip click → modal */
-document.getElementById('quickExpenseChips').addEventListener('click', (e) => {
-  const chip = e.target.closest('.qe-chip');
-  if (!chip) return;
-  const qe = quickExpenses.find(q => q.id === chip.dataset.qeId);
+/* select change → open modal */
+document.getElementById('quickExpenseSelect').addEventListener('change', (e) => {
+  const id = e.target.value;
+  if (!id) return;
+  const qe = quickExpenses.find(q => q.id === id);
   if (qe) openQEModal(qe.name);
+  e.target.value = '';
 });
 
 /* modal buttons */
@@ -2171,17 +2165,17 @@ document.getElementById('qeAmount').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('qeSubmit').click();
 });
 
-/* manage panel toggle */
+/* "+ Add Type" toggle */
 document.getElementById('toggleManageQE').addEventListener('click', () => {
   const panel = document.getElementById('manageQESection');
   const btn = document.getElementById('toggleManageQE');
   const open = panel.style.display === 'none';
   panel.style.display = open ? '' : 'none';
-  btn.textContent = open ? '− Manage' : '+ Manage Quick Expenses';
-  if (open) renderManageQE();
+  btn.textContent = open ? '− Cancel' : '+ Add Type';
+  if (open) setTimeout(() => document.getElementById('newQEName').focus(), 50);
 });
 
-/* add new quick expense type */
+/* save new quick expense type */
 function submitNewQE() {
   const input = document.getElementById('newQEName');
   const name = input.value.trim();
@@ -2189,23 +2183,14 @@ function submitNewQE() {
   quickExpenses.push({ id: 'qe-' + Date.now(), name });
   saveQuickExpenses();
   input.value = '';
-  renderQuickExpenseChips();
-  renderManageQE();
+  document.getElementById('manageQESection').style.display = 'none';
+  document.getElementById('toggleManageQE').textContent = '+ Add Type';
+  renderQuickExpenseSelect();
 }
 document.getElementById('addQEBtn').addEventListener('click', submitNewQE);
 document.getElementById('newQEName').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitNewQE(); });
 
-/* delete quick expense type */
-document.getElementById('qeManageList').addEventListener('click', (e) => {
-  const id = e.target.closest('[data-delete-qe]')?.dataset.deleteQe;
-  if (!id) return;
-  quickExpenses = quickExpenses.filter(q => q.id !== id);
-  saveQuickExpenses();
-  renderQuickExpenseChips();
-  renderManageQE();
-});
-
-renderQuickExpenseChips();
+renderQuickExpenseSelect();
 
 /* ── Boot ── */
 chrome.storage.local.get([PROFILES_KEY], (result) => {

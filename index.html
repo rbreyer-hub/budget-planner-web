@@ -270,28 +270,19 @@
       </section>
 
       <section class="card">
-        <div class="row" style="align-items:flex-end;">
-          <h2 style="margin:0;flex:1">Incidental One-Time Payments</h2>
-          <button class="qe-manage-btn" id="toggleManageQE">+ Manage Quick Expenses</button>
-        </div>
+        <h2 style="margin:0 0 6px">Incidental One-Time Payments</h2>
         <p class="muted">Track unplanned, one-time expenses (eating out, impulse buys, etc.). Past months auto-archive but still count toward your balance.</p>
 
         <div class="quick-expense-bar" style="margin-top:12px">
-          <span class="quick-expense-label">Quick add:</span>
-          <div id="quickExpenseChips" class="quick-expense-chips"></div>
+          <span class="quick-expense-label">Quick Expense</span>
+          <select id="quickExpenseSelect" class="qe-select">
+            <option value="">— select type —</option>
+          </select>
+          <button id="toggleManageQE" class="qe-manage-btn">+ Add Type</button>
         </div>
-
-        <div id="manageQESection" class="qe-manage" style="display:none">
-          <div class="qe-manage-title">Quick Expense Types</div>
-          <div id="qeManageList" class="qe-manage-list"></div>
-          <div class="row" style="gap:8px;margin-top:4px">
-            <div style="flex:1">
-              <input id="newQEName" type="text" placeholder="e.g. Parking" style="width:100%" />
-            </div>
-            <div style="flex:0 0 auto;align-self:flex-end">
-              <button id="addQEBtn" style="width:auto;padding:8px 14px;">Add</button>
-            </div>
-          </div>
+        <div id="manageQESection" class="qe-add-type-row" style="display:none">
+          <input id="newQEName" type="text" placeholder="New expense type..." />
+          <button id="addQEBtn" style="width:auto;padding:8px 14px;">Save</button>
         </div>
 
         <div class="row" style="margin-top:12px">
