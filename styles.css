@@ -879,8 +879,8 @@ p  { margin: 0; }
 }
 .qe-manage-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; padding: 0;
-  background: none; border: 1px dashed var(--p-border); border-radius: 6px;
+  width: 30px !important; height: 30px; padding: 0;
+  background: none !important; border: 1px dashed var(--p-border); border-radius: 6px;
   font-size: 18px; line-height: 1; color: var(--p-muted); cursor: pointer;
   font-family: inherit; flex-shrink: 0;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
