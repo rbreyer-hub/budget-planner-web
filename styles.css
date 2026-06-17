@@ -1026,19 +1026,21 @@ p  { margin: 0; }
   .planner-shell .row > div.compact { flex: 1 1 100%; min-width: 0; }
   .planner-shell .row > div[style*="flex:0 0 auto"] { flex: 1 1 100%; }
   /* inputs and date fields always fill their container */
-  .planner-shell input,
-  .planner-shell select { width: 100%; min-width: 0; box-sizing: border-box; }
+  .planner-shell input { width: 100%; min-width: 0; box-sizing: border-box; }
   .planner-shell input[type="date"] { min-width: 0; width: 100%; }
-  /* buttons */
-  .planner-shell button { width: 100%; }
+  /* selects fill container — except the quick-expense select which is handled separately */
+  .planner-shell select:not(.qe-select) { width: 100%; min-width: 0; box-sizing: border-box; }
+  /* buttons go full width — except the + icon button */
+  .planner-shell button:not(.qe-manage-btn) { width: 100%; }
   .planner-shell button[style*="width:auto"] { width: auto !important; }
   /* tables scroll horizontally — action cells wrap their buttons */
   .planner-shell table { font-size: 13px; }
   .planner-shell td[style*="white-space:nowrap"] { white-space: normal !important; }
   .planner-shell td[style*="white-space: nowrap"] { white-space: normal !important; }
-  /* quick expense bar — go full width on mobile so select can shrink */
+  /* quick expense bar — full width so select fills remaining space */
   .quick-expense-bar { width: 100%; }
-  .qe-select { max-width: none; }
+  .qe-select { width: auto; flex: 1; min-width: 0; max-width: none; }
+  .qe-manage-btn { width: 30px !important; flex-shrink: 0; }
   .tab-bar { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
   .planner-header { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
