@@ -94,10 +94,28 @@ body.dark-planner .planner-shell tr.row-past-due td{ color: #fca5a5; }
 body.dark-planner .planner-shell .tag              { background: #1e2130; color: var(--p-muted); }
 body.dark-planner .planner-shell .tag.positive     { background: #0f2318; color: #4ade80; }
 body.dark-planner .planner-shell .tag.negative     { background: #2a0f0f; color: #fca5a5; }
-/* misc light surfaces */
+/* misc light surfaces — catch both inline and CSS-class versions */
 body.dark-planner .planner-shell [style*="background:#f8fafc"],
 body.dark-planner .planner-shell [style*="background: #f8fafc"] { background: #1e2130 !important; }
+body.dark-planner .planner-shell .incidental-summary { background: #1e2130; color: var(--p-text); }
+/* badges */
 body.dark-planner .planner-shell .archived-label   { background: #29240e; color: #f0c060; }
+body.dark-planner .planner-shell .pause-badge      { background: #29240e; color: #f0c060; }
+body.dark-planner .planner-shell .paid-badge       { background: #0f2318; color: #4ade80; }
+body.dark-planner .planner-shell .past-due-badge   { background: #2a0f0f; color: #fca5a5; }
+body.dark-planner .planner-shell .in-balance-badge { background: #1a2240; color: #93c5fd; }
+/* qe-manage-btn — keep transparent/icon style in dark mode */
+body.dark-planner .qe-manage-btn {
+  background: none !important;
+  border: 1px dashed rgba(255,255,255,0.3);
+  color: var(--p-muted);
+  width: 30px; height: 30px;
+}
+body.dark-planner .qe-manage-btn:hover {
+  background: rgba(212,165,116,0.12) !important;
+  border-color: var(--p-accent);
+  color: var(--p-accent);
+}
 /* modals */
 body.dark-planner .qe-modal        { background: #1a1d25; }
 body.dark-planner .add-type-modal  { background: #1a1d25; }
@@ -813,7 +831,7 @@ p  { margin: 0; }
 
 /* ── Quick Expense chips ── */
 .quick-expense-bar {
-  display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  display: inline-flex; align-items: center; gap: 8px;
   padding-bottom: 14px; border-bottom: 1px solid var(--p-border);
 }
 .quick-expense-label {
