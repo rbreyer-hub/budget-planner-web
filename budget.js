@@ -2231,3 +2231,48 @@ chrome.storage.local.get([PROFILES_KEY], (result) => {
   renderTabs();
   refreshAll();
 });
+
+/* ── Auto-refresh on deploy ── */
+(function () {
+  const PAGE_URL = location.origin + location.pathname;
+  let knownTag = null;
+  let bannerShown = false;
+
+  async function poll() {
+    try {
+      const r = await fetch(PAGE_URL, { method: 'HEAD', cache: 'no-store' });
+      const tag = r.headers.get('etag') || r.headers.get('last-modified');
+      if (!tag) return;
+      if (knownTag === null) { knownTag = tag; return; }
+      if (tag !== knownTag && !bannerShown) showBanner();
+    } catch (_) {}
+  }
+
+  function showBanner() {
+    bannerShown = true;
+    let secs = 15;
+    const bar = document.createElement('div');
+    bar.id = 'update-bar';
+    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#d4a574;color:#1a1d25;padding:10px 16px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:14px;font-weight:600;box-shadow:0 2px 12px rgba(0,0,0,0.3)';
+    const label = document.createElement('span');
+    label.textContent = `⟳ New version available — refreshing in ${secs}s`;
+    const refreshBtn = document.createElement('button');
+    refreshBtn.textContent = 'Refresh now';
+    refreshBtn.style.cssText = 'background:#1a1d25;color:#f0c896;border:none;padding:5px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit';
+    refreshBtn.onclick = () => location.reload();
+    const dismissBtn = document.createElement('button');
+    dismissBtn.textContent = '×';
+    dismissBtn.style.cssText = 'background:none;border:none;color:#1a1d25;font-size:22px;cursor:pointer;padding:0 4px;line-height:1';
+    dismissBtn.onclick = () => { clearInterval(ticker); bar.remove(); };
+    bar.append(label, refreshBtn, dismissBtn);
+    document.body.prepend(bar);
+    const ticker = setInterval(() => {
+      secs--;
+      if (secs <= 0) { clearInterval(ticker); location.reload(); }
+      else label.textContent = `⟳ New version available — refreshing in ${secs}s`;
+    }, 1000);
+  }
+
+  setTimeout(poll, 3000);
+  setInterval(poll, 30000);
+}());
