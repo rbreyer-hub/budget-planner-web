@@ -421,7 +421,10 @@ const renderIncidentals = () => {
     });
 
     tbl.appendChild(tbody);
-    body.appendChild(tbl);
+    const tblWrap = document.createElement("div");
+    tblWrap.style.overflowX = "auto";
+    tblWrap.appendChild(tbl);
+    body.appendChild(tblWrap);
     group.appendChild(header);
     group.appendChild(body);
     container.appendChild(group);

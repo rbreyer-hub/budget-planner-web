@@ -985,18 +985,29 @@ p  { margin: 0; }
   .planner-shell .grid { grid-template-columns: 1fr; }
   .planner-shell .actions { flex-wrap: wrap; }
   .planner-shell .tab-btn { padding: 10px 12px; font-size: 13px; }
+  /* form rows — stack all fields vertically */
   .planner-shell .row { flex-wrap: wrap; }
   .planner-shell .row > div,
   .planner-shell .row > div.mini,
   .planner-shell .row > div.compact { flex: 1 1 100%; min-width: 0; }
   .planner-shell .row > div[style*="flex:0 0 auto"] { flex: 1 1 100%; }
+  /* inputs and date fields always fill their container */
+  .planner-shell input,
+  .planner-shell select { width: 100%; min-width: 0; box-sizing: border-box; }
+  .planner-shell input[type="date"] { min-width: 0; width: 100%; }
+  /* buttons */
   .planner-shell button { width: 100%; }
   .planner-shell button[style*="width:auto"] { width: auto !important; }
+  /* tables scroll horizontally — action cells wrap their buttons */
   .planner-shell table { font-size: 13px; }
+  .planner-shell td[style*="white-space:nowrap"] { white-space: normal !important; }
+  .planner-shell td[style*="white-space: nowrap"] { white-space: normal !important; }
+  /* misc */
   .quick-expense-bar { gap: 8px; }
-  .qe-manage-btn { font-size: 11px; padding: 4px 8px; }
   .tab-bar { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
   .planner-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  /* ensure inline-flex bars don't overflow */
+  .quick-expense-bar { max-width: 100%; }
 }
 
 @media (max-width: 480px) {

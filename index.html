@@ -262,12 +262,14 @@
             <button id="addDeposit" style="width:auto;padding:8px 18px;">Add</button>
           </div>
         </div>
-        <table style="margin-top:12px">
+        <div style="overflow-x:auto;margin-top:12px">
+        <table>
           <thead>
             <tr><th>Description</th><th>Amount</th><th>Date</th><th></th></tr>
           </thead>
           <tbody id="depositTable"></tbody>
         </table>
+        </div>
       </section>
 
       <section class="card">
@@ -369,6 +371,7 @@
       <section class="card" id="pausedBillsCard" style="display:none">
         <h2>&#9208; Paused Bills</h2>
         <p class="muted">These bills are paused and excluded from all balance calculations. Click <strong>Resume</strong> to reactivate.</p>
+        <div style="overflow-x:auto">
         <table>
           <thead>
             <tr>
@@ -381,6 +384,7 @@
           </thead>
           <tbody id="pausedBillTable"></tbody>
         </table>
+        </div>
       </section>
 
 
