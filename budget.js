@@ -517,7 +517,7 @@ const renderLoans = () => {
     actionsHtml += `<button class="danger" data-action="delete-loan" data-index="${i}" style="width:auto;display:inline-block">Delete</button>`;
 
     if (loan.paused) { row.className = "row-paused"; }
-    else if (loan.repaid) { row.style.background = '#f0fdf4'; }
+    else if (loan.repaid) { row.className = "row-paid"; }
     else if (isDueToday) { row.className = "row-today"; }
 
     row.innerHTML = `

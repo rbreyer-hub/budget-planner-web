@@ -94,10 +94,43 @@ body.dark-planner .planner-shell tr.row-past-due td{ color: #fca5a5; }
 body.dark-planner .planner-shell .tag              { background: #1e2130; color: var(--p-muted); }
 body.dark-planner .planner-shell .tag.positive     { background: #0f2318; color: #4ade80; }
 body.dark-planner .planner-shell .tag.negative     { background: #2a0f0f; color: #fca5a5; }
-/* misc light surfaces — catch both inline and CSS-class versions */
-body.dark-planner .planner-shell [style*="background:#f8fafc"],
-body.dark-planner .planner-shell [style*="background: #f8fafc"] { background: #1e2130 !important; }
+/* ── Dark: month-header ─────────────────────────────── */
+body.dark-planner .planner-shell .month-header       { background: #252836; color: var(--p-text); }
+body.dark-planner .planner-shell .month-header:hover { background: #2d3141; }
+
+/* ── Dark: catch all hardcoded inline/CSS light backgrounds ── */
 body.dark-planner .planner-shell .incidental-summary { background: #1e2130; color: var(--p-text); }
+
+/* inline style attribute overrides (must use !important to beat inline specificity) */
+body.dark-planner .planner-shell [style*="background:#f8fafc"],
+body.dark-planner .planner-shell [style*="background: #f8fafc"] { background: #1e2130 !important; color: var(--p-text) !important; }
+
+body.dark-planner .planner-shell [style*="background:#f1f5f9"],
+body.dark-planner .planner-shell [style*="background: #f1f5f9"] { background: #252836 !important; color: var(--p-text) !important; }
+
+body.dark-planner .planner-shell [style*="background:#f0fdf4"],
+body.dark-planner .planner-shell [style*="background: #f0fdf4"] { background: #0f2318 !important; }
+
+body.dark-planner .planner-shell [style*="background:#fef2f2"],
+body.dark-planner .planner-shell [style*="background: #fef2f2"] { background: #2a0f0f !important; }
+
+body.dark-planner .planner-shell [style*="background:#dbeafe"],
+body.dark-planner .planner-shell [style*="background: #dbeafe"] { background: #1a2240 !important; }
+
+body.dark-planner .planner-shell [style*="background:#fffbeb"],
+body.dark-planner .planner-shell [style*="background: #fffbeb"] { background: #29240e !important; }
+
+body.dark-planner .planner-shell [style*="background:#fef9c3"],
+body.dark-planner .planner-shell [style*="background: #fef9c3"] { background: #29240e !important; }
+
+body.dark-planner .planner-shell [style*="background:#fecdd3"],
+body.dark-planner .planner-shell [style*="background: #fecdd3"] { background: #2a0f0f !important; }
+
+/* override hardcoded dark text colors inside light rows (now on dark bg) */
+body.dark-planner .planner-shell [style*="color:#991b1b"] { color: #fca5a5 !important; }
+body.dark-planner .planner-shell [style*="color:#166534"] { color: #4ade80 !important; }
+body.dark-planner .planner-shell [style*="color:#92400e"] { color: #f0c060 !important; }
+body.dark-planner .planner-shell [style*="color:#dc2626"] { color: #fca5a5 !important; }
 /* badges */
 body.dark-planner .planner-shell .archived-label   { background: #29240e; color: #f0c060; }
 body.dark-planner .planner-shell .pause-badge      { background: #29240e; color: #f0c060; }
