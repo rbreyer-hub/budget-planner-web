@@ -279,11 +279,7 @@
           <select id="quickExpenseSelect" class="qe-select">
             <option value="">— select type —</option>
           </select>
-          <button id="toggleManageQE" class="qe-manage-btn">Add Quick Expense</button>
-        </div>
-        <div id="manageQESection" class="qe-add-type-row" style="display:none">
-          <input id="newQEName" type="text" placeholder="New expense type..." />
-          <button id="addQEBtn" style="width:auto;padding:8px 14px;">Save</button>
+          <button id="toggleManageQE" class="qe-manage-btn" title="Add expense type">+</button>
         </div>
 
         <div class="row" style="margin-top:12px">
@@ -483,6 +479,18 @@
 </footer>
 
 <div id="saveToast" class="save-toast">&#10003; Saved</div>
+
+<div id="addTypeModal" class="add-type-modal-overlay" style="display:none">
+  <div class="add-type-modal">
+    <h3>New Expense Type</h3>
+    <label for="newQEName">Name</label>
+    <input id="newQEName" type="text" placeholder="e.g. Coffee" />
+    <div style="margin-top:18px;display:flex;gap:10px">
+      <button id="addTypeCancelBtn" class="secondary" style="flex:1;width:auto">Cancel</button>
+      <button id="addQEBtn" style="flex:1;width:auto">Save</button>
+    </div>
+  </div>
+</div>
 
 <div id="quickExpenseModal" class="qe-modal-overlay" style="display:none">
   <div class="qe-modal">

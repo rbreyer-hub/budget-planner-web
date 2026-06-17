@@ -2149,7 +2149,7 @@ document.getElementById('qeCancel').addEventListener('click', closeQEModal);
 document.getElementById('quickExpenseModal').addEventListener('click', (e) => {
   if (e.target.id === 'quickExpenseModal') closeQEModal();
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeQEModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeQEModal(); closeAddTypeModal(); } });
 
 document.getElementById('qeSubmit').addEventListener('click', () => {
   const amount = Number(document.getElementById('qeAmount').value || 0);
@@ -2165,14 +2165,19 @@ document.getElementById('qeAmount').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('qeSubmit').click();
 });
 
-/* "+ Add Type" toggle */
-document.getElementById('toggleManageQE').addEventListener('click', () => {
-  const panel = document.getElementById('manageQESection');
-  const btn = document.getElementById('toggleManageQE');
-  const open = panel.style.display === 'none';
-  panel.style.display = open ? '' : 'none';
-  btn.textContent = open ? '− Cancel' : 'Add Quick Expense';
-  if (open) setTimeout(() => document.getElementById('newQEName').focus(), 50);
+/* "+" → open add-type modal */
+function openAddTypeModal() {
+  document.getElementById('newQEName').value = '';
+  document.getElementById('addTypeModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('newQEName').focus(), 50);
+}
+function closeAddTypeModal() {
+  document.getElementById('addTypeModal').style.display = 'none';
+}
+document.getElementById('toggleManageQE').addEventListener('click', openAddTypeModal);
+document.getElementById('addTypeCancelBtn').addEventListener('click', closeAddTypeModal);
+document.getElementById('addTypeModal').addEventListener('click', (e) => {
+  if (e.target.id === 'addTypeModal') closeAddTypeModal();
 });
 
 /* save new quick expense type */
@@ -2182,9 +2187,7 @@ function submitNewQE() {
   if (!name) return;
   quickExpenses.push({ id: 'qe-' + Date.now(), name });
   saveQuickExpenses();
-  input.value = '';
-  document.getElementById('manageQESection').style.display = 'none';
-  document.getElementById('toggleManageQE').textContent = 'Add Quick Expense';
+  closeAddTypeModal();
   renderQuickExpenseSelect();
 }
 document.getElementById('addQEBtn').addEventListener('click', submitNewQE);
