@@ -722,7 +722,7 @@ p  { margin: 0; }
 
 /* ── Quick Expense chips ── */
 .quick-expense-bar {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap;
   padding-bottom: 14px; border-bottom: 1px solid var(--p-border);
 }
 .quick-expense-label {
@@ -730,7 +730,7 @@ p  { margin: 0; }
   letter-spacing: 0.07em; color: var(--p-muted); white-space: nowrap;
 }
 .qe-select {
-  flex: 1; max-width: 200px; padding: 7px 10px;
+  max-width: 200px; padding: 7px 10px;
   border: 1px solid var(--p-border); border-radius: 8px;
   font-size: 14px; font-family: inherit; color: var(--p-text);
   background: white; cursor: pointer;
