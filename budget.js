@@ -2276,3 +2276,19 @@ chrome.storage.local.get([PROFILES_KEY], (result) => {
   setTimeout(poll, 3000);
   setInterval(poll, 30000);
 }());
+
+/* ── Changelog modal ── */
+const changelogModal = document.getElementById('changelogModal');
+document.getElementById('changelogLink').addEventListener('click', (e) => {
+  e.preventDefault();
+  changelogModal.style.display = 'flex';
+});
+document.getElementById('changelogClose').addEventListener('click', () => {
+  changelogModal.style.display = 'none';
+});
+changelogModal.addEventListener('click', (e) => {
+  if (e.target === changelogModal) changelogModal.style.display = 'none';
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') changelogModal.style.display = 'none';
+});
