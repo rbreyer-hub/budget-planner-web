@@ -34,6 +34,86 @@
   --p-border:  #e5e7eb;
 }
 
+/* ── Dark planner mode ───────────────────────────────── */
+body.dark-planner {
+  --p-bg:           #12141a;
+  --p-card:         #1a1d25;
+  --p-text:         #f0f0f2;
+  --p-muted:        #9ca3af;
+  --p-accent:       #d4a574;
+  --p-accent-strong:#f0c896;
+  --p-danger:       #ef6b6b;
+  --p-border:       rgba(255,255,255,0.12);
+}
+body.dark-planner .planner-shell {
+  border-color: rgba(255,255,255,0.08);
+}
+body.dark-planner .planner-shell input,
+body.dark-planner .planner-shell select {
+  background: #232732;
+  color: var(--p-text);
+  border-color: var(--p-border);
+  color-scheme: dark;
+}
+body.dark-planner .planner-shell button {
+  background: #232732;
+  color: var(--p-text);
+  border-color: var(--p-border);
+}
+body.dark-planner .planner-shell button.primary {
+  background: var(--p-accent);
+  color: #1a1d25;
+  border-color: transparent;
+}
+body.dark-planner .planner-shell button.secondary {
+  background: #2d3141;
+  color: var(--p-muted);
+  border-color: var(--p-border);
+}
+body.dark-planner .planner-shell .card {
+  background: var(--p-card);
+}
+body.dark-planner .qe-select {
+  background: #232732;
+  color: var(--p-text);
+  color-scheme: dark;
+}
+body.dark-planner .qe-modal {
+  background: #1a1d25;
+}
+body.dark-planner .qe-modal input {
+  background: #232732;
+  color: var(--p-text);
+  border-color: var(--p-border);
+  color-scheme: dark;
+}
+body.dark-planner .modal {
+  background: #1a1d25;
+}
+body.dark-planner .modal input,
+body.dark-planner .modal select {
+  background: #232732;
+  color: var(--p-text);
+  border-color: var(--p-border);
+}
+
+/* ── Dark mode nav button ────────────────────────────── */
+.nav-dark-btn {
+  background: none;
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 16px;
+  padding: 6px 10px;
+  cursor: pointer;
+  line-height: 1;
+  transition: border-color 0.15s, background 0.15s;
+}
+.nav-dark-btn:hover {
+  background: var(--surface-2);
+  border-color: var(--accent);
+}
+
 /* ── Reset / base ────────────────────────────────────── */
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
@@ -531,8 +611,8 @@ p  { margin: 0; }
 }
 .planner-shell .grid .card { margin-top: 0; }
 .planner-shell label {
-  display: block; font-size: 12px; color: var(--p-muted);
-  margin-bottom: 6px; font-weight: 500;
+  display: block; font-size: 12px; color: var(--p-text);
+  margin-bottom: 6px; font-weight: 600;
 }
 .planner-shell input,
 .planner-shell select,

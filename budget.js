@@ -2171,7 +2171,7 @@ document.getElementById('toggleManageQE').addEventListener('click', () => {
   const btn = document.getElementById('toggleManageQE');
   const open = panel.style.display === 'none';
   panel.style.display = open ? '' : 'none';
-  btn.textContent = open ? '− Cancel' : '+ Add Type';
+  btn.textContent = open ? '− Cancel' : 'Add Quick Expense';
   if (open) setTimeout(() => document.getElementById('newQEName').focus(), 50);
 });
 
@@ -2184,13 +2184,28 @@ function submitNewQE() {
   saveQuickExpenses();
   input.value = '';
   document.getElementById('manageQESection').style.display = 'none';
-  document.getElementById('toggleManageQE').textContent = '+ Add Type';
+  document.getElementById('toggleManageQE').textContent = 'Add Quick Expense';
   renderQuickExpenseSelect();
 }
 document.getElementById('addQEBtn').addEventListener('click', submitNewQE);
 document.getElementById('newQEName').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitNewQE(); });
 
 renderQuickExpenseSelect();
+
+/* ── Dark mode ── */
+const DARK_KEY = 'budgetPlanner.darkMode';
+const darkBtn = document.getElementById('darkModeToggle');
+const applyDark = (on) => {
+  document.body.classList.toggle('dark-planner', on);
+  darkBtn.textContent = on ? '☀' : '☽';
+  darkBtn.title = on ? 'Switch to light mode' : 'Switch to dark mode';
+};
+applyDark(localStorage.getItem(DARK_KEY) === '1');
+darkBtn.addEventListener('click', () => {
+  const on = !document.body.classList.contains('dark-planner');
+  localStorage.setItem(DARK_KEY, on ? '1' : '0');
+  applyDark(on);
+});
 
 /* ── Boot ── */
 chrome.storage.local.get([PROFILES_KEY], (result) => {
