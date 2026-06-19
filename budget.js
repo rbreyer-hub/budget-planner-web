@@ -52,7 +52,8 @@ const makeDefaultState = () => ({
   deposits: [],
   incidentals: [],
   archivedIncidentals: {},
-  loans: []
+  loans: [],
+  funds: []
 });
 
 let activeProfile = null;
@@ -174,6 +175,7 @@ const loadState = (callback) => {
         if (!state.incidentals) state.incidentals = [];
         if (!state.archivedIncidentals) state.archivedIncidentals = {};
         if (!state.loans) state.loans = [];
+        if (!state.funds) state.funds = [];
         normalizeBills();
       } else { state = makeDefaultState(); }
     } catch (e) { state = makeDefaultState(); }
@@ -1194,6 +1196,7 @@ const refreshAll = () => {
     renderDeposits();
     renderIncidentals();
     renderLoans();
+    renderFunds();
     calculateEndingBalance();
     renderNegativeAlert();
     renderMonthlyExpenseSummary();
@@ -2290,5 +2293,150 @@ changelogModal.addEventListener('click', (e) => {
   if (e.target === changelogModal) changelogModal.style.display = 'none';
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') changelogModal.style.display = 'none';
+  if (e.key === 'Escape') {
+    changelogModal.style.display = 'none';
+    closeFundTxModal();
+  }
 });
+
+/* ── Funds ─────────────────────────────────────────────── */
+const fundsList       = document.getElementById('fundsList');
+const fundsTotalBadge = document.getElementById('fundsTotalBadge');
+const fundsBody       = document.getElementById('fundsBody');
+const fundsChevron    = document.getElementById('fundsChevron');
+const newFundNameEl   = document.getElementById('newFundName');
+const addFundBtn      = document.getElementById('addFundBtn');
+
+/* collapse / expand */
+let fundsCollapsed = false;
+document.getElementById('fundsSectionToggle').addEventListener('click', () => {
+  fundsCollapsed = !fundsCollapsed;
+  fundsBody.classList.toggle('hidden', fundsCollapsed);
+  fundsChevron.classList.toggle('collapsed', fundsCollapsed);
+});
+
+/* render */
+const renderFunds = () => {
+  if (!state.funds) state.funds = [];
+  const total = state.funds.reduce((s, f) => s + Number(f.balance || 0), 0);
+  fundsTotalBadge.textContent = formatMoney(total) + ' total';
+
+  if (!state.funds.length) {
+    fundsList.innerHTML = '<span class="fund-empty">No funds yet. Add one below to start pooling money.</span>';
+    return;
+  }
+
+  fundsList.innerHTML = '';
+  state.funds.forEach((fund, i) => {
+    const card = document.createElement('div');
+    card.className = 'fund-card';
+    card.innerHTML = `
+      <div class="fund-card-name" title="${fund.name}">${fund.name}</div>
+      <div class="fund-card-balance">${formatMoney(Number(fund.balance || 0))}</div>
+      <div class="fund-card-actions">
+        <button class="fund-action-btn fund-add"  data-fi="${i}" title="Add money to this fund">+ Add</button>
+        <button class="fund-action-btn fund-move" data-fi="${i}" title="Move money to your main account">→ Acct</button>
+        <button class="fund-action-btn fund-del"  data-fi="${i}" title="Delete fund">×</button>
+      </div>`;
+    fundsList.appendChild(card);
+  });
+};
+
+/* fund transaction modal */
+let _fundTxIndex = -1;
+let _fundTxType  = 'add'; // 'add' | 'move'
+
+function openFundTxModal(index, type) {
+  _fundTxIndex = index;
+  _fundTxType  = type;
+  const fund = state.funds[index];
+  const modal = document.getElementById('fundTxModal');
+  document.getElementById('fundTxTitle').textContent =
+    type === 'add' ? `Add to "${fund.name}"` : `Move from "${fund.name}" → Account`;
+  document.getElementById('fundTxSubmit').textContent =
+    type === 'add' ? 'Add to Fund' : 'Move to Account';
+  document.getElementById('fundTxAmount').value = '';
+  document.getElementById('fundTxNote').value   = '';
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('fundTxAmount').focus(), 50);
+}
+function closeFundTxModal() {
+  document.getElementById('fundTxModal').style.display = 'none';
+  _fundTxIndex = -1;
+}
+
+document.getElementById('fundTxCancel').addEventListener('click', closeFundTxModal);
+document.getElementById('fundTxModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('fundTxModal')) closeFundTxModal();
+});
+
+document.getElementById('fundTxSubmit').addEventListener('click', () => {
+  const amount = Number(document.getElementById('fundTxAmount').value || 0);
+  if (!amount || amount <= 0) { alert('Please enter a valid amount.'); return; }
+  const note = document.getElementById('fundTxNote').value.trim();
+  const fund = state.funds[_fundTxIndex];
+  if (!fund) { closeFundTxModal(); return; }
+
+  if (_fundTxType === 'add') {
+    fund.balance = Number(fund.balance || 0) + amount;
+    showToast(`+${formatMoney(amount)} → ${fund.name}`);
+  } else {
+    if (amount > Number(fund.balance || 0)) {
+      alert(`Not enough in "${fund.name}". Balance: ${formatMoney(Number(fund.balance || 0))}`);
+      return;
+    }
+    fund.balance = Number(fund.balance || 0) - amount;
+    /* Create a deposit entry so the main account balance reflects the transfer */
+    if (!state.deposits) state.deposits = [];
+    state.deposits.push({
+      name:   note || `From fund: ${fund.name}`,
+      amount: amount,
+      date:   todayIso
+    });
+    renderDeposits();
+    calculateEndingBalance();
+    renderNegativeAlert();
+    showToast(`${formatMoney(amount)} moved from "${fund.name}" to account`);
+  }
+
+  closeFundTxModal();
+  renderFunds();
+  saveState();
+});
+
+/* event delegation for fund card buttons */
+fundsList.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-fi]');
+  if (!btn) return;
+  const i = Number(btn.dataset.fi);
+
+  if (btn.classList.contains('fund-add'))  { openFundTxModal(i, 'add');  return; }
+  if (btn.classList.contains('fund-move')) { openFundTxModal(i, 'move'); return; }
+  if (btn.classList.contains('fund-del')) {
+    const fund = state.funds[i];
+    if (!confirm(`Delete "${fund.name}"${Number(fund.balance) ? ` (balance: ${formatMoney(Number(fund.balance))})` : ''}?`)) return;
+    state.funds.splice(i, 1);
+    renderFunds();
+    saveState();
+  }
+});
+
+/* add new fund */
+const doAddFund = () => {
+  const name = newFundNameEl.value.trim();
+  if (!name) return;
+  if (!state.funds) state.funds = [];
+  state.funds.push({ id: 'fund_' + Date.now(), name, balance: 0 });
+  newFundNameEl.value = '';
+  renderFunds();
+  saveState();
+  if (fundsCollapsed) {
+    fundsCollapsed = false;
+    fundsBody.classList.remove('hidden');
+    fundsChevron.classList.remove('collapsed');
+  }
+};
+addFundBtn.addEventListener('click', doAddFund);
+newFundNameEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAddFund(); });
+
+renderFunds();

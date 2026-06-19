@@ -314,6 +314,14 @@ p  { margin: 0; }
   transition: color 0.15s, background 0.15s;
 }
 .auth-action-btn:hover { color: var(--text); background: var(--surface); }
+.auth-signout-btn {
+  font-size: 0.8rem; font-weight: 500;
+  padding: 3px 8px;
+  border: 1px solid var(--border-2) !important;
+  border-radius: 6px;
+  color: var(--muted);
+}
+.auth-signout-btn:hover { color: var(--text); border-color: var(--accent) !important; }
 
 /* ── Buttons (shell) ─────────────────────────────────── */
 .btn {
@@ -710,6 +718,8 @@ p  { margin: 0; }
 .config-action-green:hover { background: #047857; border-color: #047857; }
 .config-action-danger { color: var(--danger); }
 .config-action-danger:hover { border-color: var(--danger); }
+.config-action-cloud { background: #0369a1; color: #fff; border-color: #0369a1; }
+.config-action-cloud:hover { background: #075985; border-color: #075985; }
 .toggle-label {
   display: inline-flex; gap: 6px; align-items: center;
   font-size: 13px; color: var(--p-text); margin: 0; cursor: pointer;
@@ -888,6 +898,70 @@ p  { margin: 0; }
 .planner-shell .paid-badge     { background: #dcfce7; color: #166534; }
 .planner-shell .past-due-badge { background: #fef2f2; color: var(--p-danger); }
 .planner-shell .in-balance-badge { background: #e0e7ff; color: #3730a3; }
+
+/* ── Funds section ───────────────────────────────────── */
+.funds-header {
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+  user-select: none; margin-bottom: 0;
+}
+.funds-header h2 { flex: 1; }
+.funds-total-badge {
+  font-size: 13px; font-weight: 600; color: var(--p-muted);
+  background: var(--p-bg); border: 1px solid var(--p-border);
+  border-radius: 20px; padding: 2px 10px; white-space: nowrap;
+}
+.funds-chevron { font-size: 11px; color: var(--p-muted); transition: transform 0.2s; }
+.funds-chevron.collapsed { transform: rotate(180deg); }
+#fundsBody { margin-top: 14px; }
+#fundsBody.hidden { display: none; }
+
+.funds-list {
+  display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;
+}
+.fund-card {
+  display: flex; flex-direction: column; gap: 6px;
+  background: var(--p-bg); border: 1px solid var(--p-border);
+  border-radius: 10px; padding: 12px 14px; min-width: 160px; flex: 1 1 160px; max-width: 240px;
+}
+.fund-card-name {
+  font-size: 13px; font-weight: 600; color: var(--p-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fund-card-balance {
+  font-size: 20px; font-weight: 700; color: var(--p-text); line-height: 1;
+}
+.fund-card-actions {
+  display: flex; gap: 5px; margin-top: 4px;
+}
+.fund-action-btn {
+  flex: 1; padding: 5px 6px; font-size: 11px; font-weight: 600;
+  border-radius: 6px; border: 1px solid var(--p-border);
+  background: var(--p-card); color: var(--p-text); cursor: pointer;
+  white-space: nowrap; transition: background 0.15s, border-color 0.15s;
+}
+.fund-action-btn:hover { background: var(--p-bg); border-color: var(--p-accent); }
+.fund-action-btn.fund-add  { color: #059669; border-color: #059669; }
+.fund-action-btn.fund-add:hover  { background: #ecfdf5; }
+.fund-action-btn.fund-move { color: #2563eb; border-color: #2563eb; }
+.fund-action-btn.fund-move:hover { background: #eff6ff; }
+.fund-action-btn.fund-del  { color: #dc2626; border-color: transparent; }
+.fund-action-btn.fund-del:hover  { border-color: #dc2626; background: #fef2f2; }
+.fund-empty { color: var(--p-muted); font-size: 13px; padding: 6px 0; }
+.funds-add-row {
+  display: flex; gap: 8px; align-items: center; margin-top: 4px;
+}
+.funds-add-row input {
+  flex: 1; min-width: 0; padding: 7px 10px; border-radius: 8px;
+  border: 1px solid var(--p-border); font-size: 14px; font-family: inherit;
+  background: var(--p-card); color: var(--p-text);
+}
+
+body.dark-planner .fund-card { background: #1e2130; }
+body.dark-planner .fund-action-btn { background: #252836; }
+body.dark-planner .fund-action-btn.fund-add:hover  { background: #0f2318; }
+body.dark-planner .fund-action-btn.fund-move:hover { background: #1a2240; }
+body.dark-planner .fund-action-btn.fund-del:hover  { background: #2a0f0f; }
+body.dark-planner .funds-total-badge { background: #1a1d25; }
 
 .planner-shell .incidental-summary {
   display: flex; gap: 16px; flex-wrap: wrap;
