@@ -946,21 +946,16 @@ p  { margin: 0; }
 .fund-action-btn.fund-move:hover { background: #eff6ff; }
 .fund-action-btn.fund-del  { color: #dc2626; border-color: transparent; }
 .fund-action-btn.fund-del:hover  { border-color: #dc2626; background: #fef2f2; }
+.fund-action-btn.fund-xfer { color: #7c3aed; border-color: #7c3aed; }
+.fund-action-btn.fund-xfer:hover { background: #f5f3ff; }
 .fund-empty { color: var(--p-muted); font-size: 13px; padding: 6px 0; }
-.funds-add-row {
-  display: flex; gap: 8px; align-items: center; margin-top: 4px;
-}
-.funds-add-row input {
-  flex: 1; min-width: 0; padding: 7px 10px; border-radius: 8px;
-  border: 1px solid var(--p-border); font-size: 14px; font-family: inherit;
-  background: var(--p-card); color: var(--p-text);
-}
 
 body.dark-planner .fund-card { background: #1e2130; }
 body.dark-planner .fund-action-btn { background: #252836; }
 body.dark-planner .fund-action-btn.fund-add:hover  { background: #0f2318; }
 body.dark-planner .fund-action-btn.fund-move:hover { background: #1a2240; }
 body.dark-planner .fund-action-btn.fund-del:hover  { background: #2a0f0f; }
+body.dark-planner .fund-action-btn.fund-xfer:hover { background: #1e1433; }
 body.dark-planner .funds-total-badge { background: #1a1d25; }
 
 .planner-shell .incidental-summary {

@@ -2304,8 +2304,6 @@ const fundsList       = document.getElementById('fundsList');
 const fundsTotalBadge = document.getElementById('fundsTotalBadge');
 const fundsBody       = document.getElementById('fundsBody');
 const fundsChevron    = document.getElementById('fundsChevron');
-const newFundNameEl   = document.getElementById('newFundName');
-const addFundBtn      = document.getElementById('addFundBtn');
 
 /* collapse / expand */
 let fundsCollapsed = false;
@@ -2315,14 +2313,14 @@ document.getElementById('fundsSectionToggle').addEventListener('click', () => {
   fundsChevron.classList.toggle('collapsed', fundsCollapsed);
 });
 
-/* render */
+/* ── render fund cards ── */
 const renderFunds = () => {
   if (!state.funds) state.funds = [];
   const total = state.funds.reduce((s, f) => s + Number(f.balance || 0), 0);
   fundsTotalBadge.textContent = formatMoney(total) + ' total';
 
   if (!state.funds.length) {
-    fundsList.innerHTML = '<span class="fund-empty">No funds yet. Add one below to start pooling money.</span>';
+    fundsList.innerHTML = '<span class="fund-empty">No funds yet — click "+ New Fund" to create one.</span>';
     return;
   }
 
@@ -2330,34 +2328,116 @@ const renderFunds = () => {
   state.funds.forEach((fund, i) => {
     const card = document.createElement('div');
     card.className = 'fund-card';
+    const hasOtherFunds = state.funds.length > 1;
     card.innerHTML = `
       <div class="fund-card-name" title="${fund.name}">${fund.name}</div>
       <div class="fund-card-balance">${formatMoney(Number(fund.balance || 0))}</div>
       <div class="fund-card-actions">
         <button class="fund-action-btn fund-add"  data-fi="${i}" title="Add money to this fund">+ Add</button>
         <button class="fund-action-btn fund-move" data-fi="${i}" title="Move money to your main account">→ Acct</button>
+        ${hasOtherFunds ? `<button class="fund-action-btn fund-xfer" data-fi="${i}" title="Transfer to another fund">⇄ Fund</button>` : ''}
         <button class="fund-action-btn fund-del"  data-fi="${i}" title="Delete fund">×</button>
       </div>`;
     fundsList.appendChild(card);
   });
 };
 
-/* fund transaction modal */
+/* ── Create fund modal ── */
+function openAddFundModal() {
+  document.getElementById('newFundName').value    = '';
+  document.getElementById('newFundBalance').value = '';
+  document.getElementById('addFundModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('newFundName').focus(), 50);
+}
+function closeAddFundModal() {
+  document.getElementById('addFundModal').style.display = 'none';
+}
+
+document.getElementById('addFundBtn').addEventListener('click', openAddFundModal);
+document.getElementById('addFundCancel').addEventListener('click', closeAddFundModal);
+document.getElementById('addFundModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('addFundModal')) closeAddFundModal();
+});
+
+document.getElementById('addFundSave').addEventListener('click', () => {
+  const name = document.getElementById('newFundName').value.trim();
+  if (!name) {
+    document.getElementById('newFundName').focus();
+    document.getElementById('newFundName').style.borderColor = '#dc2626';
+    setTimeout(() => document.getElementById('newFundName').style.borderColor = '', 1500);
+    return;
+  }
+  const balance = Math.max(0, Number(document.getElementById('newFundBalance').value || 0));
+  if (!state.funds) state.funds = [];
+  state.funds.push({ id: 'fund_' + Date.now(), name, balance });
+  closeAddFundModal();
+  if (fundsCollapsed) {
+    fundsCollapsed = false;
+    fundsBody.classList.remove('hidden');
+    fundsChevron.classList.remove('collapsed');
+  }
+  renderFunds();
+  saveState();
+  showToast(`Fund "${name}" created`);
+});
+document.getElementById('newFundName').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('addFundSave').click();
+});
+
+/* ── Fund transaction modal (add / move to account / transfer to fund) ── */
 let _fundTxIndex = -1;
-let _fundTxType  = 'add'; // 'add' | 'move'
+let _fundTxType  = 'add'; // 'add' | 'move' | 'xfer'
 
 function openFundTxModal(index, type) {
   _fundTxIndex = index;
   _fundTxType  = type;
   const fund = state.funds[index];
-  const modal = document.getElementById('fundTxModal');
-  document.getElementById('fundTxTitle').textContent =
-    type === 'add' ? `Add to "${fund.name}"` : `Move from "${fund.name}" → Account`;
-  document.getElementById('fundTxSubmit').textContent =
-    type === 'add' ? 'Add to Fund' : 'Move to Account';
+  const destRow  = document.getElementById('fundTxDestRow');
+  const destSel  = document.getElementById('fundTxDest');
+  const noteEl   = document.getElementById('fundTxNote');
+  const submitEl = document.getElementById('fundTxSubmit');
+  const titleEl  = document.getElementById('fundTxTitle');
+
   document.getElementById('fundTxAmount').value = '';
-  document.getElementById('fundTxNote').value   = '';
-  modal.style.display = 'flex';
+  noteEl.value = '';
+
+  if (type === 'add') {
+    titleEl.textContent    = `Add to "${fund.name}"`;
+    submitEl.textContent   = 'Add to Fund';
+    noteEl.placeholder     = 'e.g. Monthly savings';
+    destRow.style.display  = 'none';
+  } else if (type === 'move') {
+    titleEl.textContent    = `Move from "${fund.name}"`;
+    submitEl.textContent   = 'Move';
+    noteEl.placeholder     = 'e.g. Cover expenses';
+    destRow.style.display  = '';
+    // populate destination
+    destSel.innerHTML = '<option value="__account__">→ Main Account</option>';
+    state.funds.forEach((f, i) => {
+      if (i !== index) {
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = `→ ${f.name}`;
+        destSel.appendChild(opt);
+      }
+    });
+  } else if (type === 'xfer') {
+    titleEl.textContent    = `Transfer from "${fund.name}"`;
+    submitEl.textContent   = 'Transfer';
+    noteEl.placeholder     = 'e.g. Consolidating funds';
+    destRow.style.display  = '';
+    destSel.innerHTML      = '';
+    state.funds.forEach((f, i) => {
+      if (i !== index) {
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = f.name;
+        destSel.appendChild(opt);
+      }
+    });
+  }
+
+  document.getElementById('fundTxModal').style.display = 'flex';
   setTimeout(() => document.getElementById('fundTxAmount').focus(), 50);
 }
 function closeFundTxModal() {
@@ -2372,31 +2452,44 @@ document.getElementById('fundTxModal').addEventListener('click', (e) => {
 
 document.getElementById('fundTxSubmit').addEventListener('click', () => {
   const amount = Number(document.getElementById('fundTxAmount').value || 0);
-  if (!amount || amount <= 0) { alert('Please enter a valid amount.'); return; }
+  if (!amount || amount <= 0) {
+    document.getElementById('fundTxAmount').focus();
+    document.getElementById('fundTxAmount').style.borderColor = '#dc2626';
+    setTimeout(() => document.getElementById('fundTxAmount').style.borderColor = '', 1500);
+    return;
+  }
   const note = document.getElementById('fundTxNote').value.trim();
   const fund = state.funds[_fundTxIndex];
   if (!fund) { closeFundTxModal(); return; }
 
   if (_fundTxType === 'add') {
     fund.balance = Number(fund.balance || 0) + amount;
-    showToast(`+${formatMoney(amount)} → ${fund.name}`);
-  } else {
+    showToast(`+${formatMoney(amount)} added to "${fund.name}"`);
+
+  } else if (_fundTxType === 'move' || _fundTxType === 'xfer') {
     if (amount > Number(fund.balance || 0)) {
       alert(`Not enough in "${fund.name}". Balance: ${formatMoney(Number(fund.balance || 0))}`);
       return;
     }
     fund.balance = Number(fund.balance || 0) - amount;
-    /* Create a deposit entry so the main account balance reflects the transfer */
-    if (!state.deposits) state.deposits = [];
-    state.deposits.push({
-      name:   note || `From fund: ${fund.name}`,
-      amount: amount,
-      date:   todayIso
-    });
-    renderDeposits();
-    calculateEndingBalance();
-    renderNegativeAlert();
-    showToast(`${formatMoney(amount)} moved from "${fund.name}" to account`);
+
+    const dest = document.getElementById('fundTxDest').value;
+    if (dest === '__account__') {
+      /* Move to main account: create a deposit entry */
+      if (!state.deposits) state.deposits = [];
+      state.deposits.push({ name: note || `From fund: ${fund.name}`, amount, date: todayIso });
+      renderDeposits();
+      calculateEndingBalance();
+      renderNegativeAlert();
+      showToast(`${formatMoney(amount)} moved from "${fund.name}" → account`);
+    } else {
+      /* Transfer to another fund */
+      const destFund = state.funds[Number(dest)];
+      if (destFund) {
+        destFund.balance = Number(destFund.balance || 0) + amount;
+        showToast(`${formatMoney(amount)} transferred "${fund.name}" → "${destFund.name}"`);
+      }
+    }
   }
 
   closeFundTxModal();
@@ -2404,14 +2497,14 @@ document.getElementById('fundTxSubmit').addEventListener('click', () => {
   saveState();
 });
 
-/* event delegation for fund card buttons */
+/* event delegation on card buttons */
 fundsList.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-fi]');
   if (!btn) return;
   const i = Number(btn.dataset.fi);
-
   if (btn.classList.contains('fund-add'))  { openFundTxModal(i, 'add');  return; }
   if (btn.classList.contains('fund-move')) { openFundTxModal(i, 'move'); return; }
+  if (btn.classList.contains('fund-xfer')) { openFundTxModal(i, 'xfer'); return; }
   if (btn.classList.contains('fund-del')) {
     const fund = state.funds[i];
     if (!confirm(`Delete "${fund.name}"${Number(fund.balance) ? ` (balance: ${formatMoney(Number(fund.balance))})` : ''}?`)) return;
@@ -2420,23 +2513,5 @@ fundsList.addEventListener('click', (e) => {
     saveState();
   }
 });
-
-/* add new fund */
-const doAddFund = () => {
-  const name = newFundNameEl.value.trim();
-  if (!name) return;
-  if (!state.funds) state.funds = [];
-  state.funds.push({ id: 'fund_' + Date.now(), name, balance: 0 });
-  newFundNameEl.value = '';
-  renderFunds();
-  saveState();
-  if (fundsCollapsed) {
-    fundsCollapsed = false;
-    fundsBody.classList.remove('hidden');
-    fundsChevron.classList.remove('collapsed');
-  }
-};
-addFundBtn.addEventListener('click', doAddFund);
-newFundNameEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAddFund(); });
 
 renderFunds();
