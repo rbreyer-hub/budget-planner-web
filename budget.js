@@ -1943,6 +1943,37 @@ elements.depositTable.addEventListener("click", (e) => {
   if (action !== "remove-deposit" && action !== "cancel-deposit") return;
   const idx = Number(e.target.dataset.index), dep = state.deposits[idx];
   if (!dep) return;
+
+  /* If this deposit came from a fund transfer, offer to return the money */
+  if (dep.fromFund) {
+    const returnIt = confirm(
+      `Return ${formatMoney(Number(dep.amount||0))} to the "${dep.fromFund.name}" fund?\n\n` +
+      `OK = delete deposit and return money to fund\n` +
+      `Cancel = delete deposit only`
+    );
+    if (returnIt) {
+      if (dep.fromFund.profileId === activeProfile) {
+        /* Fund is in this tab — update live state */
+        const f = state.funds?.find(f => f.id === dep.fromFund.id);
+        if (f) f.balance = Math.round((Number(f.balance||0) + Number(dep.amount||0)) * 100) / 100;
+        renderFunds();
+      } else {
+        /* Fund is in another tab — patch that profile's data */
+        const fKey = storageKeyForProfile(dep.fromFund.profileId);
+        const fRaw = localStorage.getItem(fKey);
+        let fState;
+        try { fState = JSON.parse(fRaw); } catch(_) { fState = makeDefaultState(); }
+        const f = fState.funds?.find(f => f.id === dep.fromFund.id);
+        if (f) {
+          f.balance = Math.round((Number(f.balance||0) + Number(dep.amount||0)) * 100) / 100;
+          const fData = JSON.stringify(fState);
+          localStorage.setItem(fKey, fData);
+          window.cloudSync?.saveProfile(dep.fromFund.profileId, fData);
+        }
+      }
+    }
+  }
+
   if (action === "remove-deposit" && dep.date) {
     const dd = startOfDay(toDate(dep.date)), balD = startOfDay(toDate(state.balanceDate)), now = startOfDay(new Date());
     if (dd >= balD && dd <= now) {
@@ -2474,7 +2505,10 @@ document.getElementById('fundTxSubmit').addEventListener('click', () => {
     if (dest.startsWith('__profile__:')) {
       const destProfileId = dest.slice('__profile__:'.length);
       const destProfile   = profiles.find(p => p.id === destProfileId);
-      const depositEntry  = { name: note || `From fund: ${fund.name}`, amount, date: todayIso };
+      const depositEntry  = {
+        name: note || `From fund: ${fund.name}`, amount, date: todayIso,
+        fromFund: { id: fund.id, name: fund.name, profileId: activeProfile }
+      };
       if (destProfileId === activeProfile) {
         /* Same tab — write directly into live state */
         if (!state.deposits) state.deposits = [];
