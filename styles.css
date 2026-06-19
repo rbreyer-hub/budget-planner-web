@@ -151,7 +151,7 @@ body.dark-planner .qe-manage-btn:hover {
 }
 /* modals */
 body.dark-planner .qe-modal        { background: #1a1d25; }
-body.dark-planner .add-type-modal  { background: #1a1d25; }
+body.dark-planner .add-type-modal  { background: #1a1d25; color: var(--p-text); }
 body.dark-planner .add-type-modal input {
   background: #1e2130; color: var(--p-text);
   border: 1px solid rgba(255,255,255,0.28); color-scheme: dark;
@@ -314,14 +314,6 @@ p  { margin: 0; }
   transition: color 0.15s, background 0.15s;
 }
 .auth-action-btn:hover { color: var(--text); background: var(--surface); }
-.auth-signout-btn {
-  font-size: 0.8rem; font-weight: 500;
-  padding: 3px 8px;
-  border: 1px solid var(--border-2) !important;
-  border-radius: 6px;
-  color: var(--muted);
-}
-.auth-signout-btn:hover { color: var(--text); border-color: var(--accent) !important; }
 
 /* ── Buttons (shell) ─────────────────────────────────── */
 .btn {
