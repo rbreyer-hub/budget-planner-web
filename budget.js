@@ -2363,9 +2363,7 @@ function closeAddFundModal() {
 
 document.getElementById('addFundBtn').addEventListener('click', openAddFundModal);
 document.getElementById('addFundCancel').addEventListener('click', closeAddFundModal);
-document.getElementById('addFundModal').addEventListener('click', (e) => {
-  if (e.target === document.getElementById('addFundModal')) closeAddFundModal();
-});
+document.getElementById('addFundClose').addEventListener('click', closeAddFundModal);
 
 document.getElementById('addFundSave').addEventListener('click', () => {
   const name = document.getElementById('newFundName').value.trim();
