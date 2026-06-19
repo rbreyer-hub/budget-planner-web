@@ -11,7 +11,7 @@ if (typeof window !== 'undefined' && (typeof chrome === 'undefined' || !chrome.s
             const v = localStorage.getItem(k);
             if (v !== null) result[k] = v;
           });
-          if (cb) cb(result);
+          if (cb) setTimeout(() => cb(result), 0);
         },
         set(obj, cb) {
           try {
