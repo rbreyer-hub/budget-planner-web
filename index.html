@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260618i" />
+  <link rel="stylesheet" href="styles.css?v=20260619d" />
 </head>
 <body>
 
@@ -49,6 +49,17 @@
         </div>
         <input type="file" id="csvFileInput" accept=".csv,.tsv,.txt" style="display:none" />
         <input type="file" id="jsonBackupInput" accept=".json" style="display:none" />
+      </div>
+    </div>
+    <div class="nav-funds-wrap" id="navFundsWrap">
+      <button class="nav-config-btn nav-funds-btn" id="navFundsBtn" aria-label="Funds">&#128176; Funds</button>
+      <div class="nav-funds-panel" id="navFundsPanel">
+        <div class="funds-panel-top">
+          <span class="config-section-title" style="margin:0">Savings Funds</span>
+          <span id="fundsTotalBadge" class="funds-total-badge">$0.00 total</span>
+        </div>
+        <div id="fundsList" class="funds-list" style="margin-top:10px;margin-bottom:0"></div>
+        <button id="addFundBtn" style="width:auto;padding:7px 16px;margin-top:10px;font-size:0.86rem">+ New Fund</button>
       </div>
     </div>
     <button id="darkModeToggle" class="nav-dark-btn" title="Toggle dark mode">☽</button>
@@ -389,19 +400,6 @@
       </section>
 
 
-      <section class="card" id="fundsSection">
-        <div class="funds-header" id="fundsSectionToggle">
-          <h2 style="margin:0">&#127881; Funds</h2>
-          <span id="fundsTotalBadge" class="funds-total-badge">$0.00 total</span>
-          <span class="funds-chevron" id="fundsChevron">&#9650;</span>
-        </div>
-        <div id="fundsBody">
-          <p class="muted" style="margin:8px 0 12px">Pool money into named savings funds. Add money, transfer between funds, or move to your main account.</p>
-          <div id="fundsList" class="funds-list"></div>
-          <button id="addFundBtn" style="width:auto;padding:8px 20px;margin-top:4px">+ New Fund</button>
-        </div>
-      </section>
-
       <section class="card" id="loansSection">
         <h2>&#128176; Loans from Other Accounts</h2>
         <p class="muted">Track money pulled from another account to cover shortfalls. Each entry is an individual loan to pay back. Loans add to your balance on the loan date; repayments deduct on the repaid date.</p>
@@ -603,7 +601,7 @@
   <div class="add-type-modal" style="max-width:340px">
     <h3>New Fund</h3>
     <label for="newFundName">Fund Name</label>
-    <input id="newFundName" type="text" placeholder="e.g. Emergency, Vacation, Car" />
+    <input id="newFundName" type="text" placeholder="e.g. Emergency, Vacation, Car" autocomplete="off" spellcheck="false" />
     <label for="newFundBalance" style="margin-top:14px">Starting Balance <span style="font-weight:400;color:var(--p-muted)">(optional)</span></label>
     <input id="newFundBalance" type="number" step="0.01" min="0" placeholder="0.00" />
     <div style="margin-top:22px;display:flex;gap:10px">
@@ -641,7 +639,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="auth.js?v=20260618f"></script>
-<script src="budget.js?v=20260619c"></script>
+<script src="budget.js?v=20260619d"></script>
 <script>
   /* Nav scroll state + mobile toggle + year + reveal animations */
   (function () {
@@ -682,6 +680,23 @@
         }
       });
     }
+    const fundsBtn = document.getElementById('navFundsBtn');
+    const fundsPanel = document.getElementById('navFundsPanel');
+    if (fundsBtn && fundsPanel) {
+      fundsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = fundsPanel.classList.toggle('open');
+        fundsBtn.classList.toggle('active', open);
+      });
+      document.addEventListener('click', (e) => {
+        if (!document.getElementById('navFundsWrap')?.contains(e.target) &&
+            !document.getElementById('addFundModal')?.contains(e.target)) {
+          fundsPanel.classList.remove('open');
+          fundsBtn.classList.remove('active');
+        }
+      });
+    }
+
     if (localStorage.getItem('budgetProfiles')) {
       document.getElementById('planner')?.scrollIntoView({ behavior: 'instant' });
     }

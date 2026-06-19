@@ -2333,16 +2333,6 @@ document.addEventListener('keydown', (e) => {
 /* ── Funds ─────────────────────────────────────────────── */
 const fundsList       = document.getElementById('fundsList');
 const fundsTotalBadge = document.getElementById('fundsTotalBadge');
-const fundsBody       = document.getElementById('fundsBody');
-const fundsChevron    = document.getElementById('fundsChevron');
-
-/* collapse / expand */
-let fundsCollapsed = false;
-document.getElementById('fundsSectionToggle').addEventListener('click', () => {
-  fundsCollapsed = !fundsCollapsed;
-  fundsBody.classList.toggle('hidden', fundsCollapsed);
-  fundsChevron.classList.toggle('collapsed', fundsCollapsed);
-});
 
 /* ── render fund cards ── */
 const renderFunds = () => {
@@ -2375,10 +2365,13 @@ const renderFunds = () => {
 
 /* ── Create fund modal ── */
 function openAddFundModal() {
+  /* close the funds panel so the modal sits cleanly on top */
+  document.getElementById('navFundsPanel')?.classList.remove('open');
+  document.getElementById('navFundsBtn')?.classList.remove('active');
   document.getElementById('newFundName').value    = '';
   document.getElementById('newFundBalance').value = '';
   document.getElementById('addFundModal').style.display = 'flex';
-  setTimeout(() => document.getElementById('newFundName').focus(), 50);
+  document.getElementById('newFundName').focus({ preventScroll: true });
 }
 function closeAddFundModal() {
   document.getElementById('addFundModal').style.display = 'none';

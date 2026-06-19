@@ -670,6 +670,25 @@ p  { margin: 0; }
 }
 .planner-header h3:hover { background: rgba(0,0,0,0.04); }
 .nav-config-wrap { position: relative; }
+
+/* ── Funds nav panel ─────────────────────────────────── */
+.nav-funds-wrap { position: relative; }
+.nav-funds-btn { color: var(--text); }
+.nav-funds-panel {
+  display: none; position: absolute; right: 0; top: calc(100% + 10px);
+  background: var(--surface-2); border: 1px solid var(--border-2);
+  border-radius: 12px; padding: 16px;
+  width: min(440px, calc(100vw - 32px));
+  box-shadow: var(--shadow-1); z-index: 200;
+}
+.nav-funds-panel.open { display: block; }
+.funds-panel-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.nav-funds-panel .funds-list {
+  flex-wrap: wrap;
+}
+.nav-funds-panel .fund-empty { font-size: 12px; }
 .nav-config-btn {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 7px 14px;
@@ -1131,6 +1150,8 @@ body.dark-planner .funds-total-badge { background: #1a1d25; }
   .nav-config-btn { font-size: 0; padding: 7px 10px; }
   .nav-config-btn::before { content: '⚙'; font-size: 16px; }
   .nav-config-dropdown { right: -10px; min-width: 200px; }
+  .nav-funds-btn::before { content: '💰'; font-size: 16px; }
+  .nav-funds-panel { right: 0; width: min(360px, calc(100vw - 24px)); }
   .section { padding: 70px 20px; }
   .footer-inner { grid-template-columns: 1fr; }
   .footer-copy { text-align: left; }
