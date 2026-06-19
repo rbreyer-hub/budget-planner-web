@@ -2411,15 +2411,12 @@ function openFundTxModal(index, type) {
     submitEl.textContent   = 'Move';
     noteEl.placeholder     = 'e.g. Cover expenses';
     destRow.style.display  = '';
-    // populate destination
-    destSel.innerHTML = '<option value="__account__">→ Main Account</option>';
-    state.funds.forEach((f, i) => {
-      if (i !== index) {
-        const opt = document.createElement('option');
-        opt.value = String(i);
-        opt.textContent = `→ ${f.name}`;
-        destSel.appendChild(opt);
-      }
+    destSel.innerHTML      = '';
+    profiles.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = `__profile__:${p.id}`;
+      opt.textContent = p.name + (p.id === activeProfile ? ' (current)' : '');
+      destSel.appendChild(opt);
     });
   } else if (type === 'xfer') {
     titleEl.textContent    = `Transfer from "${fund.name}"`;
@@ -2474,14 +2471,30 @@ document.getElementById('fundTxSubmit').addEventListener('click', () => {
     fund.balance = Number(fund.balance || 0) - amount;
 
     const dest = document.getElementById('fundTxDest').value;
-    if (dest === '__account__') {
-      /* Move to main account: create a deposit entry */
-      if (!state.deposits) state.deposits = [];
-      state.deposits.push({ name: note || `From fund: ${fund.name}`, amount, date: todayIso });
-      renderDeposits();
-      calculateEndingBalance();
-      renderNegativeAlert();
-      showToast(`${formatMoney(amount)} moved from "${fund.name}" → account`);
+    if (dest.startsWith('__profile__:')) {
+      const destProfileId = dest.slice('__profile__:'.length);
+      const destProfile   = profiles.find(p => p.id === destProfileId);
+      const depositEntry  = { name: note || `From fund: ${fund.name}`, amount, date: todayIso };
+      if (destProfileId === activeProfile) {
+        /* Same tab — write directly into live state */
+        if (!state.deposits) state.deposits = [];
+        state.deposits.push(depositEntry);
+        renderDeposits();
+        calculateEndingBalance();
+        renderNegativeAlert();
+      } else {
+        /* Different tab — load, patch, save that profile's data */
+        const key = storageKeyForProfile(destProfileId);
+        const raw = localStorage.getItem(key);
+        let tState;
+        try { tState = JSON.parse(raw); } catch(_) { tState = makeDefaultState(); }
+        if (!tState.deposits) tState.deposits = [];
+        tState.deposits.push(depositEntry);
+        const tData = JSON.stringify(tState);
+        localStorage.setItem(key, tData);
+        window.cloudSync?.saveProfile(destProfileId, tData);
+      }
+      showToast(`${formatMoney(amount)} moved from "${fund.name}" → ${destProfile?.name ?? 'account'}`);
     } else {
       /* Transfer to another fund */
       const destFund = state.funds[Number(dest)];
