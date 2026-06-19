@@ -1151,7 +1151,15 @@ body.dark-planner .funds-total-badge { background: #1a1d25; }
   .nav-config-btn::before { content: '⚙'; font-size: 16px; }
   .nav-config-dropdown { right: -10px; min-width: 200px; }
   .nav-funds-btn::before { content: '💰'; font-size: 16px; }
-  .nav-funds-panel { right: 0; width: min(360px, calc(100vw - 24px)); }
+  .nav-funds-panel {
+    position: fixed;
+    top: 64px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
   .section { padding: 70px 20px; }
   .footer-inner { grid-template-columns: 1fr; }
   .footer-copy { text-align: left; }
