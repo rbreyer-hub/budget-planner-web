@@ -2395,14 +2395,12 @@ document.getElementById('addFundSave').addEventListener('click', () => {
   if (!state.funds) state.funds = [];
   state.funds.push({ id: 'fund_' + Date.now(), name, balance });
   closeAddFundModal();
-  if (fundsCollapsed) {
-    fundsCollapsed = false;
-    fundsBody.classList.remove('hidden');
-    fundsChevron.classList.remove('collapsed');
-  }
   renderFunds();
   saveState();
   showToast(`Fund "${name}" created`);
+  /* reopen the funds panel so the user can manage the new fund */
+  document.getElementById('navFundsPanel')?.classList.add('open');
+  document.getElementById('navFundsBtn')?.classList.add('active');
 });
 document.getElementById('newFundName').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('addFundSave').click();
