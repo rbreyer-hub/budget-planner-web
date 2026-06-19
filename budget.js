@@ -1925,14 +1925,6 @@ elements.incidentalGroups.addEventListener("click", (e) => {
     return;
   }
 
-  if (inc.date && !inc.inBalance) {
-    const incD = startOfDay(toDate(inc.date)), balD = startOfDay(toDate(state.balanceDate)), now = startOfDay(new Date());
-    if (incD >= balD && incD <= now) {
-      state.startingBalance -= Number(inc.amount || 0);
-      state.startingBalance = Math.round(state.startingBalance * 100) / 100;
-      elements.startingBalance.value = state.startingBalance;
-    }
-  }
   state.incidentals.splice(idx, 1);
   renderIncidentals(); saveState(); calculateEndingBalance(); renderNegativeAlert();
 });
@@ -1974,14 +1966,6 @@ elements.depositTable.addEventListener("click", (e) => {
     }
   }
 
-  if (action === "remove-deposit" && dep.date) {
-    const dd = startOfDay(toDate(dep.date)), balD = startOfDay(toDate(state.balanceDate)), now = startOfDay(new Date());
-    if (dd >= balD && dd <= now) {
-      state.startingBalance += Number(dep.amount||0);
-      state.startingBalance = Math.round(state.startingBalance*100)/100;
-      elements.startingBalance.value = state.startingBalance;
-    }
-  }
   state.deposits.splice(idx, 1);
   renderDeposits(); saveState(); calculateEndingBalance(); renderNegativeAlert();
 });
