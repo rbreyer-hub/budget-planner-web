@@ -1682,7 +1682,7 @@ document.getElementById('syncDebtPlanner').addEventListener('click', () => {
 
   const debts = debtData.debts || [];
   const qualifying = debts.filter(d =>
-    d.type === 'credit_card' || d.name.toLowerCase().includes('mortgage')
+    d.type === 'credit_card' || d.type === 'personal_loan' || d.name.toLowerCase().includes('mortgage')
   );
 
   if (qualifying.length === 0) {
