@@ -1691,12 +1691,10 @@ const runDebtPlannerSync = (silent = false) => {
   else activeDebts.sort((a, b) => b.apr - a.apr);
   const focusDebtId = activeDebts[0]?.id || null;
 
-  const qualifying = debts.filter(d =>
-    d.type === 'credit_card' || d.type === 'personal_loan' || d.name.toLowerCase().includes('mortgage')
-  );
+  const qualifying = debts;
 
   if (qualifying.length === 0) {
-    if (!silent) alert('No credit card or mortgage debts found in Debt Planner.');
+    if (!silent) alert('No debts found in Debt Planner.');
     return false;
   }
 
