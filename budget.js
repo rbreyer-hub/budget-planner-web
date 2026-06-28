@@ -1668,16 +1668,16 @@ elements.resetBills.addEventListener("click", () => {
 });
 
 /* ── Sync with Debt Planner ── */
-document.getElementById('syncDebtPlanner').addEventListener('click', () => {
+const runDebtPlannerSync = (silent = false) => {
   const raw = localStorage.getItem('debtPlannerData');
   if (!raw) {
-    alert('No Debt Planner data found. Open the Debt Planner in this browser first, then try again.');
-    return;
+    if (!silent) alert('No Debt Planner data found. Open the Debt Planner in this browser first, then try again.');
+    return false;
   }
   let debtData;
   try { debtData = JSON.parse(raw); } catch(_) {
-    alert('Could not read Debt Planner data.');
-    return;
+    if (!silent) alert('Could not read Debt Planner data.');
+    return false;
   }
 
   const debts = debtData.debts || [];
@@ -1696,27 +1696,31 @@ document.getElementById('syncDebtPlanner').addEventListener('click', () => {
   );
 
   if (qualifying.length === 0) {
-    alert('No credit card or mortgage debts found in Debt Planner.');
-    return;
+    if (!silent) alert('No credit card or mortgage debts found in Debt Planner.');
+    return false;
   }
 
   let added = 0, updated = 0;
   qualifying.forEach(debt => {
     const existingIdx = state.bills.findIndex(b => b.debtId === debt.id);
-    const isFocus = debt.id === focusDebtId;
-    const newAmount = debt.balance > 0.005 ? (debt.minPayment || 0) + (isFocus ? extraPayment : 0) : 0;
+    const isFocus = debt.id === focusDebtId && extraPayment > 0;
+    const baseMin = debt.minPayment || 0;
+    const newAmount = debt.balance > 0.005 ? baseMin + (isFocus ? extraPayment : 0) : 0;
+    const displayName = isFocus
+      ? `${debt.name} (min $${baseMin} + $${extraPayment} focus)`
+      : debt.name;
     if (existingIdx >= 0) {
       const existing = state.bills[existingIdx];
       state.bills[existingIdx] = {
         ...existing,
-        name: debt.name,
+        name: displayName,
         amount: newAmount,
         ...(debt.dueDay > 0 ? { dueDay: debt.dueDay } : {})
       };
       updated++;
     } else {
       state.bills.push({
-        name: debt.name,
+        name: displayName,
         amount: newAmount,
         interval: 'monthly',
         dueDay: debt.dueDay > 0 ? debt.dueDay : null,
@@ -1735,8 +1739,17 @@ document.getElementById('syncDebtPlanner').addEventListener('click', () => {
   saveState();
   calculateEndingBalance();
   renderNegativeAlert();
-  showToast(`Debt Planner synced: ${added} added, ${updated} updated`);
-});
+  renderMonthlyExpenseSummary();
+  if (!silent) showToast(`Debt Planner synced: ${added} added, ${updated} updated`);
+  return true;
+};
+
+document.getElementById('syncDebtPlanner').addEventListener('click', () => runDebtPlannerSync(false));
+
+// Auto-sync on page load if bills are already linked to debt planner
+setTimeout(() => {
+  if (state.bills.some(b => b.debtId)) runDebtPlannerSync(true);
+}, 500);
 
 /* ── Events: export ── */
 elements.exportBills.addEventListener("click", () => {
