@@ -579,7 +579,7 @@ const calculateEndingBalance = () => {
   elements.balanceState.textContent = running >= 0 ? "Positive" : "Negative";
   elements.balanceState.className = `tag ${running >= 0 ? "positive" : "negative"}`;
 
-  /* Bills summary: today -> check date */
+  /* Bills summary: incidentals shown for full [balanceDate, checkDate]; recurring bills from today only */
   const summaryDiv = document.getElementById("billsSummary");
   const todayLocal = startOfDay(new Date());
   const items = [];
@@ -587,47 +587,45 @@ const calculateEndingBalance = () => {
 
   let runBal = Number(state.startingBalance || 0);
   const balStart = startOfDay(toDate(state.balanceDate));
-  const walker = new Date(balStart);
-  while (walker < todayLocal) {
-    const wTxns = getTransactionsForDay(walker);
-    wTxns.forEach(t => { runBal += t.type === 'income' ? t.amount : -t.amount; });
-    walker.setDate(walker.getDate() + 1);
-  }
-
-  if (cd >= todayLocal) {
-    const sc = new Date(todayLocal);
-    while (sc <= cd) {
-      const txns = getTransactionsForDay(sc);
-      txns.forEach(t => {
-        const ds = sc.toLocaleDateString("en-US", {month:"short", day:"numeric"});
-        runBal += t.type === 'income' ? t.amount : -t.amount;
-        items.push({ date: ds, name: t.name, amount: t.amount, type: t.type, balance: runBal });
-        if (t.type === "income") totalInc += t.amount; else totalExp += t.amount;
-      });
-      sc.setDate(sc.getDate()+1);
-    }
+  const sc = new Date(balStart);
+  while (sc <= cd) {
+    const txns = getTransactionsForDay(sc);
+    const ds = sc.toLocaleDateString("en-US", {month:"short", day:"numeric"});
+    const isPast = sc < todayLocal;
+    txns.forEach(t => {
+      runBal += t.type === 'income' ? t.amount : -t.amount;
+      const isIncidental = t.name.startsWith('• ');
+      if (!isPast || isIncidental) {
+        items.push({ date: ds, name: t.name, amount: t.amount, type: t.type, balance: runBal, isPast });
+        if (!isPast) {
+          if (t.type === 'income') totalInc += t.amount; else totalExp += t.amount;
+        }
+      }
+    });
+    sc.setDate(sc.getDate() + 1);
   }
   if (items.length) {
-    let html = '<h4 style="margin:0 0 8px">Bills &amp; Income: Today &#8594; Check Date</h4>';
+    let html = '<h4 style="margin:0 0 8px">Bills &amp; Incidentals &#8594; Check Date</h4>';
     html += '<div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:6px">';
     html += '<table style="width:100%;border-collapse:collapse;font-size:13px">';
-    html += '<thead><tr><th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--muted)">Date</th><th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--muted)">Bill</th><th style="padding:6px 8px;text-align:right;font-size:11px;color:var(--muted)">Amount</th><th style="padding:6px 8px;text-align:right;font-size:11px;color:var(--muted)">Balance</th></tr></thead><tbody>';
+    html += '<thead><tr><th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--muted)">Date</th><th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--muted)">Item</th><th style="padding:6px 8px;text-align:right;font-size:11px;color:var(--muted)">Amount</th><th style="padding:6px 8px;text-align:right;font-size:11px;color:var(--muted)">Balance</th></tr></thead><tbody>';
     items.forEach(it => {
       const color = it.type === "income" ? "#16a34a" : "#dc2626";
       const sign = it.type === "income" ? "+" : "-";
       const balColor = it.balance >= 0 ? "#16a34a" : "#dc2626";
-      html += `<tr><td style="padding:4px 8px">${it.date}</td><td style="padding:4px 8px">${it.name}</td><td style="padding:4px 8px;text-align:right;color:${color}">${sign}${formatMoney(it.amount)}</td><td style="padding:4px 8px;text-align:right;font-weight:600;color:${balColor}">${formatMoney(it.balance)}</td></tr>`;
+      const rowStyle = it.isPast ? 'opacity:0.75;background:var(--surface-2,#f9f9f9)' : '';
+      html += `<tr style="${rowStyle}"><td style="padding:4px 8px">${it.date}</td><td style="padding:4px 8px">${it.name}</td><td style="padding:4px 8px;text-align:right;color:${color}">${sign}${formatMoney(it.amount)}</td><td style="padding:4px 8px;text-align:right;font-weight:600;color:${balColor}">${formatMoney(it.balance)}</td></tr>`;
     });
     html += '</tbody></table></div>';
     const totalIncWithBalance = totalInc + Number(state.startingBalance || 0);
     html += '<div style="margin-top:8px;font-size:13px;display:flex;gap:16px;flex-wrap:wrap">';
-    html += `<span style="color:#dc2626">Expenses: -${formatMoney(totalExp)}</span>`;
+    html += `<span style="color:#dc2626">Upcoming expenses: -${formatMoney(totalExp)}</span>`;
     html += `<span style="color:#16a34a">Income (incl. balance): +${formatMoney(totalIncWithBalance)}</span>`;
     html += `<strong>Net: ${formatMoney(totalIncWithBalance - totalExp)}</strong>`;
     html += '</div>';
     summaryDiv.innerHTML = html;
   } else {
-    summaryDiv.innerHTML = '<p class="muted" style="margin-top:8px">No bills in range.</p>';
+    summaryDiv.innerHTML = '<p class="muted" style="margin-top:8px">No bills or incidentals in range.</p>';
   }
   if (typeof renderMonthlyExpenseSummary === 'function') renderMonthlyExpenseSummary();
   if (typeof renderMonthlyBreakdown === 'function') renderMonthlyBreakdown();
@@ -713,7 +711,7 @@ const renderBills = () => {
     const isInBal = bill.includedInBalance === currentMonthKey();
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td>${isToday ? '<span class="today-arrow">\u25B6</span>' : ''}<input type="text" data-field="name" data-index="${i}" value="${bill.name}" style="width:${isToday ? 'calc(100% - 22px)' : '100%'};display:inline-block" />${isPaused ? '<span class="pause-badge">Paused</span>' : ''}${isPastDue ? '<span class="past-due-badge">Past Due</span>' : ''}${isPaid ? '<span class="paid-badge">&check; Paid</span>' : ''}${hasManualPayToday ? '<span class="paid-badge">&check; Paid Today</span>' : ''}${isInBal ? '<span class="paid-badge" style="background:#dbeafe;color:#1d4ed8">In Balance</span>' : ''}</td>
+      <td>${isToday ? '<span class="today-arrow">\u25B6</span>' : ''}<input type="text" data-field="name" data-index="${i}" value="${bill.name}" style="width:${isToday ? 'calc(100% - 22px)' : '100%'};display:inline-block" />${bill.debtId ? '<span class="pause-badge" style="background:#4f46e5;color:#fff">Linked</span>' : ''}${isPaused ? '<span class="pause-badge">Paused</span>' : ''}${isPastDue ? '<span class="past-due-badge">Past Due</span>' : ''}${isPaid ? '<span class="paid-badge">&check; Paid</span>' : ''}${hasManualPayToday ? '<span class="paid-badge">&check; Paid Today</span>' : ''}${isInBal ? '<span class="paid-badge" style="background:#dbeafe;color:#1d4ed8">In Balance</span>' : ''}</td>
       <td><input type="number" step="0.01" data-field="amount" data-index="${i}" value="${bill.amount}" style="width:90px" /></td>
       <td>
         <select data-field="interval" data-index="${i}" style="width:100px">
@@ -1667,6 +1665,66 @@ elements.resetBills.addEventListener("click", () => {
   if (!confirm('Clear all bills for this profile?')) return;
   state.bills = [];
   normalizeBills(); renderBills(); renderPausedBills(); saveState(); calculateEndingBalance(); renderNegativeAlert();
+});
+
+/* ── Sync with Debt Planner ── */
+document.getElementById('syncDebtPlanner').addEventListener('click', () => {
+  const raw = localStorage.getItem('debtPlannerData');
+  if (!raw) {
+    alert('No Debt Planner data found. Open the Debt Planner in this browser first, then try again.');
+    return;
+  }
+  let debtData;
+  try { debtData = JSON.parse(raw); } catch(_) {
+    alert('Could not read Debt Planner data.');
+    return;
+  }
+
+  const debts = debtData.debts || [];
+  const qualifying = debts.filter(d =>
+    d.type === 'credit_card' || d.name.toLowerCase().includes('mortgage')
+  );
+
+  if (qualifying.length === 0) {
+    alert('No credit card or mortgage debts found in Debt Planner.');
+    return;
+  }
+
+  let added = 0, updated = 0;
+  qualifying.forEach(debt => {
+    const existingIdx = state.bills.findIndex(b => b.debtId === debt.id);
+    const newAmount = debt.balance > 0.005 ? (debt.minPayment || 0) : 0;
+    if (existingIdx >= 0) {
+      const existing = state.bills[existingIdx];
+      state.bills[existingIdx] = {
+        ...existing,
+        name: debt.name,
+        amount: newAmount,
+        ...(debt.dueDay > 0 ? { dueDay: debt.dueDay } : {})
+      };
+      updated++;
+    } else {
+      state.bills.push({
+        name: debt.name,
+        amount: newAmount,
+        interval: 'monthly',
+        dueDay: debt.dueDay > 0 ? debt.dueDay : null,
+        startDate: state.balanceDate,
+        type: 'expense',
+        debtId: debt.id,
+        manualPayments: []
+      });
+      added++;
+    }
+  });
+
+  normalizeBills();
+  renderBills();
+  renderPausedBills();
+  saveState();
+  calculateEndingBalance();
+  renderNegativeAlert();
+  showToast(`Debt Planner synced: ${added} added, ${updated} updated`);
 });
 
 /* ── Events: export ── */
