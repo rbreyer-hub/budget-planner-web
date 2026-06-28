@@ -1681,6 +1681,16 @@ document.getElementById('syncDebtPlanner').addEventListener('click', () => {
   }
 
   const debts = debtData.debts || [];
+  const strategy = debtData.strategy || 'snowball';
+  const extraPayment = Number(debtData.extraPayment || 0);
+  const strategyExcluded = debtData.strategyExcluded || [];
+
+  // Determine focus debt (month-1 snowball/avalanche target)
+  const activeDebts = debts.filter(d => !strategyExcluded.includes(d.id) && d.balance > 0.005);
+  if (strategy === 'snowball') activeDebts.sort((a, b) => a.balance - b.balance);
+  else activeDebts.sort((a, b) => b.apr - a.apr);
+  const focusDebtId = activeDebts[0]?.id || null;
+
   const qualifying = debts.filter(d =>
     d.type === 'credit_card' || d.type === 'personal_loan' || d.name.toLowerCase().includes('mortgage')
   );
@@ -1693,7 +1703,8 @@ document.getElementById('syncDebtPlanner').addEventListener('click', () => {
   let added = 0, updated = 0;
   qualifying.forEach(debt => {
     const existingIdx = state.bills.findIndex(b => b.debtId === debt.id);
-    const newAmount = debt.balance > 0.005 ? (debt.minPayment || 0) : 0;
+    const isFocus = debt.id === focusDebtId;
+    const newAmount = debt.balance > 0.005 ? (debt.minPayment || 0) + (isFocus ? extraPayment : 0) : 0;
     if (existingIdx >= 0) {
       const existing = state.bills[existingIdx];
       state.bills[existingIdx] = {
