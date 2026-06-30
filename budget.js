@@ -1775,6 +1775,43 @@ const handleBillEdit = (e) => {
 elements.billTable.addEventListener("input", handleBillEdit);
 elements.billTable.addEventListener("change", handleBillEdit);
 
+/* ── Debt Planner payment bridge ── */
+const recordPaymentToDebtPlanner = (debtId, amount, date) => {
+  try {
+    const raw = localStorage.getItem('debtPlannerData');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    const idx = (data.debts || []).findIndex(d => d.id === debtId);
+    if (idx < 0) return;
+    const debt = data.debts[idx];
+    const newBalance = Math.max(0, Math.round((debt.balance - amount) * 100) / 100);
+    data.debts[idx] = {
+      ...debt,
+      balance: newBalance,
+      payments: [...(debt.payments || []), { date, amount, note: 'Budget Planner' }]
+    };
+    localStorage.setItem('debtPlannerData', JSON.stringify(data));
+  } catch(e) { console.warn('[DebtSync] recordPayment failed:', e); }
+};
+
+const undoPaymentFromDebtPlanner = (debtId, date) => {
+  try {
+    const raw = localStorage.getItem('debtPlannerData');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    const idx = (data.debts || []).findIndex(d => d.id === debtId);
+    if (idx < 0) return;
+    const debt = data.debts[idx];
+    const payments = debt.payments || [];
+    const pmtIdx = payments.findLastIndex(p => p.date === date && p.note === 'Budget Planner');
+    if (pmtIdx < 0) return;
+    const restored = Math.round((debt.balance + payments[pmtIdx].amount) * 100) / 100;
+    const newPayments = payments.filter((_, i) => i !== pmtIdx);
+    data.debts[idx] = { ...debt, balance: restored, payments: newPayments };
+    localStorage.setItem('debtPlannerData', JSON.stringify(data));
+  } catch(e) { console.warn('[DebtSync] undoPayment failed:', e); }
+};
+
 /* ── Events: undo pay today ── */
 elements.billTable.addEventListener("click", (e) => {
   if (e.target.dataset.action !== "undo-pay") return;
@@ -1788,6 +1825,7 @@ elements.billTable.addEventListener("click", (e) => {
     return mpd.getFullYear() === curY && mpd.getMonth() === curM;
   }) : -1;
   if (mpIdx === -1) return;
+  const removedDate = bill.manualPayments[mpIdx].date;
   bill.manualPayments.splice(mpIdx, 1);
   const stillHasThisMonth = bill.manualPayments.some(mp => {
     if (!mp.date) return false;
@@ -1796,6 +1834,10 @@ elements.billTable.addEventListener("click", (e) => {
   });
   if (!stillHasThisMonth) bill.paused = false;
   renderBills(); renderPausedBills(); saveState(); calculateEndingBalance(); renderNegativeAlert();
+  if (bill.debtId) {
+    undoPaymentFromDebtPlanner(bill.debtId, removedDate);
+    runDebtPlannerSync(true);
+  }
 });
 
 /* ── Events: toggle included in balance ── */
@@ -1845,6 +1887,10 @@ elements.billTable.addEventListener("click", (e) => {
     elements.startingBalance.value = state.startingBalance;
   }
   renderBills(); renderPausedBills(); saveState(); calculateEndingBalance(); renderNegativeAlert(); renderMonthlyExpenseSummary();
+  if (bill.debtId) {
+    recordPaymentToDebtPlanner(bill.debtId, Number(bill.amount || 0), payDate);
+    runDebtPlannerSync(true);
+  }
 });
 
 /* ── Events: bill remove / cancel ── */
