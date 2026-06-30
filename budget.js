@@ -863,12 +863,17 @@ const renderNegativeAlert = () => {
 };
 
 /* ── Monthly expense summary ── */
+const EXPENSE_MONTH_KEY = 'budgetPlanner.expenseMonth';
 const expenseMonthInput = document.getElementById('expenseMonth');
 {
+  const saved = localStorage.getItem(EXPENSE_MONTH_KEY);
   const now = new Date();
-  expenseMonthInput.value = `${now.getFullYear()}-${pad2(now.getMonth()+1)}`;
+  expenseMonthInput.value = saved || `${now.getFullYear()}-${pad2(now.getMonth()+1)}`;
 }
-expenseMonthInput.addEventListener('change', () => { renderMonthlyExpenseSummary(); });
+expenseMonthInput.addEventListener('change', () => {
+  localStorage.setItem(EXPENSE_MONTH_KEY, expenseMonthInput.value);
+  renderMonthlyExpenseSummary();
+});
 
 const renderMonthlyExpenseSummary = () => {
   const content = document.getElementById('monthlyExpenseContent');
