@@ -1736,6 +1736,12 @@ const runDebtPlannerSync = (silent = false) => {
     }
   });
 
+  // Remove linked bills whose debt no longer exists in the Debt Planner
+  const allDebtIds = new Set(debts.map(d => d.id));
+  const prevLen = state.bills.length;
+  state.bills = state.bills.filter(b => !b.debtId || allDebtIds.has(b.debtId));
+  const removed = prevLen - state.bills.length;
+
   normalizeBills();
   renderBills();
   renderPausedBills();
@@ -1743,7 +1749,7 @@ const runDebtPlannerSync = (silent = false) => {
   calculateEndingBalance();
   renderNegativeAlert();
   renderMonthlyExpenseSummary();
-  if (!silent) showToast(`Debt Planner synced: ${added} added, ${updated} updated`);
+  if (!silent) showToast(`Debt Planner synced: ${added} added, ${updated} updated${removed > 0 ? `, ${removed} removed` : ''}`);
   return true;
 };
 
