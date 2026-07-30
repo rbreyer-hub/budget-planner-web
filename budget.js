@@ -278,13 +278,13 @@ const getTransactionsForDay = (day) => {
       txns.push({ name: dep.name, amount: Number(dep.amount||0), type: "income" });
   });
   (state.incidentals || []).forEach((inc) => {
-    if (inc.inBalance) return;
+    if (inc.inBalance || inc.paused) return;
     if (inc.date && d.getTime() === startOfDay(toDate(inc.date)).getTime())
       txns.push({ name: "\u2022 " + inc.name, amount: Number(inc.amount||0), type: "expense" });
   });
   Object.values(state.archivedIncidentals || {}).forEach(arr => {
     arr.forEach((inc) => {
-      if (inc.inBalance) return;
+      if (inc.inBalance || inc.archivedManually) return;
       if (inc.date && d.getTime() === startOfDay(toDate(inc.date)).getTime())
         txns.push({ name: "\u2022 " + inc.name, amount: Number(inc.amount||0), type: "expense" });
     });
@@ -404,17 +404,21 @@ const renderIncidentals = () => {
     allItems.forEach(it => {
       const tr = document.createElement("tr");
       const dd = it.date ? new Date(it.date+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}) : "\u2014";
+      const isPaused = !it._archived && !!it.paused;
       const inBalBadge = it.inBalance ? ' <span class="in-balance-badge" title="Already reflected in current balance \u2014 not subtracted again">In balance</span>' : '';
-      const amountColor = it.inBalance ? 'var(--muted)' : 'var(--danger)';
-      const amountStyle = it.inBalance ? 'text-decoration:line-through;' : '';
+      const pausedBadge = isPaused ? ' <span class="pause-badge" title="Excluded from the balance projection while paused">Paused</span>' : '';
+      const excluded = it.inBalance || isPaused;
+      const amountColor = excluded ? 'var(--muted)' : 'var(--danger)';
+      const amountStyle = excluded ? 'text-decoration:line-through;' : '';
       let actions = '';
       if (!it._archived) {
-        actions = `<button class="secondary" data-action="edit-inc" data-index="${it._idx}" style="width:auto;display:inline-block;margin-right:4px">Edit</button><button class="danger" data-action="remove-inc" data-index="${it._idx}" style="width:auto;display:inline-block;margin-right:4px">Remove</button><button class="secondary" data-action="archive-inc" data-index="${it._idx}" style="width:auto;display:inline-block">Archive</button>`;
+        actions = `<button class="secondary" data-action="edit-inc" data-index="${it._idx}" style="width:auto;display:inline-block;margin-right:4px">Edit</button><button class="danger" data-action="remove-inc" data-index="${it._idx}" style="width:auto;display:inline-block;margin-right:4px">Remove</button><button class="${isPaused ? 'secondary' : 'warn'}" data-action="toggle-pause-inc" data-index="${it._idx}" style="width:auto;display:inline-block;margin-right:4px">${isPaused ? 'Set Active' : 'Pause'}</button><button class="secondary" data-action="archive-inc" data-index="${it._idx}" style="width:auto;display:inline-block">Archive</button>`;
       } else {
         actions = `<button class="secondary" data-action="edit-archived-inc" data-month="${it._archiveMonth}" data-index="${it._archIdx}" style="width:auto;display:inline-block;margin-right:4px">Edit</button><button class="danger" data-action="remove-archived-inc" data-month="${it._archiveMonth}" data-index="${it._archIdx}" style="width:auto;display:inline-block;margin-right:4px">Remove</button><button class="secondary" data-action="unarchive-inc" data-month="${it._archiveMonth}" data-index="${it._archIdx}" style="width:auto;display:inline-block">Unarchive</button>`;
       }
+      if (isPaused) tr.className = "row-paused";
       tr.innerHTML = `
-        <td style="padding:4px 8px">${it.name}${inBalBadge}</td>
+        <td style="padding:4px 8px">${it.name}${inBalBadge}${pausedBadge}</td>
         <td style="padding:4px 8px;color:${amountColor};${amountStyle}" data-cell="amount">-${formatMoney(Number(it.amount||0))}</td>
         <td style="padding:4px 8px" data-cell="date">${dd}</td>
         <td style="padding:4px 8px;white-space:nowrap">${actions}</td>
@@ -2040,9 +2044,19 @@ elements.incidentalGroups.addEventListener("click", (e) => {
     const ai = Number(e.target.dataset.index);
     const inc = (state.archivedIncidentals[mk] || [])[ai];
     if (!inc) return;
-    state.incidentals.push({ ...inc });
+    const { archivedManually, ...restored } = inc;
+    state.incidentals.push(restored);
     state.archivedIncidentals[mk].splice(ai, 1);
     if (!state.archivedIncidentals[mk].length) delete state.archivedIncidentals[mk];
+    renderIncidentals(); saveState(); calculateEndingBalance(); renderNegativeAlert();
+    return;
+  }
+
+  if (action === "toggle-pause-inc") {
+    const idx = Number(e.target.dataset.index);
+    const inc = state.incidentals[idx];
+    if (!inc) return;
+    inc.paused = !inc.paused;
     renderIncidentals(); saveState(); calculateEndingBalance(); renderNegativeAlert();
     return;
   }
@@ -2056,7 +2070,7 @@ elements.incidentalGroups.addEventListener("click", (e) => {
     const mk = inc.date ? monthKey(inc.date) : currentMonthKey();
     if (!state.archivedIncidentals) state.archivedIncidentals = {};
     if (!state.archivedIncidentals[mk]) state.archivedIncidentals[mk] = [];
-    state.archivedIncidentals[mk].push({ ...inc });
+    state.archivedIncidentals[mk].push({ ...inc, archivedManually: true });
     state.incidentals.splice(idx, 1);
     renderIncidentals(); saveState(); calculateEndingBalance(); renderNegativeAlert();
     return;
