@@ -348,6 +348,17 @@
         <div id="monthlyExpenseContent"></div>
       </section>
 
+      <section class="card" id="archivedIncidentalsCard">
+        <div class="row" style="align-items: flex-end;">
+          <h2 style="margin: 0; flex: 1;">&#128193; Archived Incidentals</h2>
+          <div style="flex:0 0 auto; align-self: flex-end;">
+            <button id="toggleArchivedIncidentals" class="secondary" style="width:auto; padding:8px 14px;">Hide</button>
+          </div>
+        </div>
+        <p class="muted">Past-month incidental payments, organized by month with each item's date and amount.</p>
+        <div id="archivedIncidentalContent"></div>
+      </section>
+
       <section class="card" id="monthlyBreakdownCard">
         <div class="row" style="align-items: flex-end;">
           <h2 style="margin: 0; flex: 1;">&#128202; Monthly Breakdown</h2>
@@ -650,7 +661,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="auth.js?v=20260618f"></script>
-<script src="budget.js?v=20260730a"></script>
+<script src="budget.js?v=20260901a"></script>
 <script>
   /* Nav scroll state + mobile toggle + year + reveal animations */
   (function () {

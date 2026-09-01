@@ -338,7 +338,46 @@ const archiveIncidentals = () => {
   }
 };
 
-/* ── Render incidentals ── */
+/* ── Build a table of incidental rows (active or archived) ── */
+const buildIncidentalTable = (items) => {
+  const tbl = document.createElement("table");
+  tbl.style.cssText = "width:100%;border-collapse:collapse;font-size:13px;margin:0";
+  tbl.innerHTML = '<thead><tr><th style="padding:6px 8px">Description</th><th style="padding:6px 8px">Amount</th><th style="padding:6px 8px">Date</th><th style="padding:6px 8px"></th></tr></thead>';
+  const tbody = document.createElement("tbody");
+
+  items.forEach(it => {
+    const tr = document.createElement("tr");
+    const dd = it.date ? new Date(it.date+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}) : "—";
+    const isPaused = !it._archived && !!it.paused;
+    const inBalBadge = it.inBalance ? ' <span class="in-balance-badge" title="Already reflected in current balance — not subtracted again">In balance</span>' : '';
+    const pausedBadge = isPaused ? ' <span class="pause-badge" title="Excluded from the balance projection while paused">Paused</span>' : '';
+    const excluded = it.inBalance || isPaused;
+    const amountColor = excluded ? 'var(--muted)' : 'var(--danger)';
+    const amountStyle = excluded ? 'text-decoration:line-through;' : '';
+    let actions = '';
+    if (!it._archived) {
+      actions = `<button class="secondary" data-action="edit-inc" data-index="${it._idx}" style="width:auto;display:inline-block;margin-right:4px">Edit</button><button class="danger" data-action="remove-inc" data-index="${it._idx}" style="width:auto;display:inline-block;margin-right:4px">Remove</button><button class="${isPaused ? 'secondary' : 'warn'}" data-action="toggle-pause-inc" data-index="${it._idx}" style="width:auto;display:inline-block;margin-right:4px">${isPaused ? 'Set Active' : 'Pause'}</button><button class="secondary" data-action="archive-inc" data-index="${it._idx}" style="width:auto;display:inline-block">Archive</button>`;
+    } else {
+      actions = `<button class="secondary" data-action="edit-archived-inc" data-month="${it._archiveMonth}" data-index="${it._archIdx}" style="width:auto;display:inline-block;margin-right:4px">Edit</button><button class="danger" data-action="remove-archived-inc" data-month="${it._archiveMonth}" data-index="${it._archIdx}" style="width:auto;display:inline-block;margin-right:4px">Remove</button><button class="secondary" data-action="unarchive-inc" data-month="${it._archiveMonth}" data-index="${it._archIdx}" style="width:auto;display:inline-block">Unarchive</button>`;
+    }
+    if (isPaused) tr.className = "row-paused";
+    tr.innerHTML = `
+      <td style="padding:4px 8px">${it.name}${inBalBadge}${pausedBadge}</td>
+      <td style="padding:4px 8px;color:${amountColor};${amountStyle}" data-cell="amount">-${formatMoney(Number(it.amount||0))}</td>
+      <td style="padding:4px 8px" data-cell="date">${dd}</td>
+      <td style="padding:4px 8px;white-space:nowrap">${actions}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  tbl.appendChild(tbody);
+  const tblWrap = document.createElement("div");
+  tblWrap.style.overflowX = "auto";
+  tblWrap.appendChild(tbl);
+  return tblWrap;
+};
+
+/* ── Render incidentals (active only — archived items are hidden here) ── */
 const renderIncidentals = () => {
   const container = elements.incidentalGroups;
   container.innerHTML = "";
@@ -351,25 +390,21 @@ const renderIncidentals = () => {
     grouped[mk].push({ ...inc, _idx: origIdx });
   });
 
-  const allKeys = new Set([...Object.keys(grouped), ...Object.keys(state.archivedIncidentals || {})]);
-  const sortedKeys = [...allKeys].sort().reverse();
+  const sortedKeys = Object.keys(grouped).sort().reverse();
 
-  let grandTotal = 0;
   let currentMonthTotal = 0;
+  let grandTotal = 0;
+  Object.values(state.archivedIncidentals || {}).forEach(arr => {
+    grandTotal += arr.reduce((s, it) => s + Number(it.amount || 0), 0);
+  });
 
   if (!sortedKeys.length) {
-    container.innerHTML = '<p class="muted" style="text-align:center">No incidental payments yet.</p>';
-    elements.incidentalSummary.style.display = "none";
-    return;
+    container.innerHTML = '<p class="muted" style="text-align:center">No active incidental payments. Past months are archived automatically — see Archived Incidentals below.</p>';
   }
 
   sortedKeys.forEach(mk => {
-    const currentItems = grouped[mk] || [];
-    const archivedItems = (state.archivedIncidentals || {})[mk] || [];
-    const allItems = [...currentItems, ...archivedItems.map((a, ai) => ({ ...a, _archived: true, _archiveMonth: mk, _archIdx: ai }))];
-    if (!allItems.length) return;
-
-    const total = allItems.reduce((s, it) => s + Number(it.amount || 0), 0);
+    const items = grouped[mk];
+    const total = items.reduce((s, it) => s + Number(it.amount || 0), 0);
     grandTotal += total;
     if (mk === curKey) currentMonthTotal = total;
     const isCurrentMonth = mk === curKey;
@@ -382,8 +417,7 @@ const renderIncidentals = () => {
     header.innerHTML = `
       <span>
         <span class="chevron">&#9660;</span>
-        ${monthLabel(mk)} (${allItems.length} item${allItems.length!==1?"s":""})
-        ${!isCurrentMonth ? '<span class="archived-label">Archived</span>' : ''}
+        ${monthLabel(mk)} (${items.length} item${items.length!==1?"s":""})
       </span>
       <span class="month-total">-${formatMoney(total)}</span>
     `;
@@ -396,41 +430,7 @@ const renderIncidentals = () => {
       body.classList.toggle("collapsed");
     });
 
-    const tbl = document.createElement("table");
-    tbl.style.cssText = "width:100%;border-collapse:collapse;font-size:13px;margin:0";
-    tbl.innerHTML = '<thead><tr><th style="padding:6px 8px">Description</th><th style="padding:6px 8px">Amount</th><th style="padding:6px 8px">Date</th><th style="padding:6px 8px"></th></tr></thead>';
-    const tbody = document.createElement("tbody");
-
-    allItems.forEach(it => {
-      const tr = document.createElement("tr");
-      const dd = it.date ? new Date(it.date+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}) : "\u2014";
-      const isPaused = !it._archived && !!it.paused;
-      const inBalBadge = it.inBalance ? ' <span class="in-balance-badge" title="Already reflected in current balance \u2014 not subtracted again">In balance</span>' : '';
-      const pausedBadge = isPaused ? ' <span class="pause-badge" title="Excluded from the balance projection while paused">Paused</span>' : '';
-      const excluded = it.inBalance || isPaused;
-      const amountColor = excluded ? 'var(--muted)' : 'var(--danger)';
-      const amountStyle = excluded ? 'text-decoration:line-through;' : '';
-      let actions = '';
-      if (!it._archived) {
-        actions = `<button class="secondary" data-action="edit-inc" data-index="${it._idx}" style="width:auto;display:inline-block;margin-right:4px">Edit</button><button class="danger" data-action="remove-inc" data-index="${it._idx}" style="width:auto;display:inline-block;margin-right:4px">Remove</button><button class="${isPaused ? 'secondary' : 'warn'}" data-action="toggle-pause-inc" data-index="${it._idx}" style="width:auto;display:inline-block;margin-right:4px">${isPaused ? 'Set Active' : 'Pause'}</button><button class="secondary" data-action="archive-inc" data-index="${it._idx}" style="width:auto;display:inline-block">Archive</button>`;
-      } else {
-        actions = `<button class="secondary" data-action="edit-archived-inc" data-month="${it._archiveMonth}" data-index="${it._archIdx}" style="width:auto;display:inline-block;margin-right:4px">Edit</button><button class="danger" data-action="remove-archived-inc" data-month="${it._archiveMonth}" data-index="${it._archIdx}" style="width:auto;display:inline-block;margin-right:4px">Remove</button><button class="secondary" data-action="unarchive-inc" data-month="${it._archiveMonth}" data-index="${it._archIdx}" style="width:auto;display:inline-block">Unarchive</button>`;
-      }
-      if (isPaused) tr.className = "row-paused";
-      tr.innerHTML = `
-        <td style="padding:4px 8px">${it.name}${inBalBadge}${pausedBadge}</td>
-        <td style="padding:4px 8px;color:${amountColor};${amountStyle}" data-cell="amount">-${formatMoney(Number(it.amount||0))}</td>
-        <td style="padding:4px 8px" data-cell="date">${dd}</td>
-        <td style="padding:4px 8px;white-space:nowrap">${actions}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    tbl.appendChild(tbody);
-    const tblWrap = document.createElement("div");
-    tblWrap.style.overflowX = "auto";
-    tblWrap.appendChild(tbl);
-    body.appendChild(tblWrap);
+    body.appendChild(buildIncidentalTable(items));
     group.appendChild(header);
     group.appendChild(body);
     container.appendChild(group);
@@ -442,6 +442,8 @@ const renderIncidentals = () => {
     <span><strong>This month:</strong> <span style="color:var(--danger)">-${formatMoney(currentMonthTotal)}</span></span>
     <span><strong>All time:</strong> <span style="color:var(--danger)">-${formatMoney(grandTotal)}</span></span>
   `;
+
+  if (typeof renderArchivedIncidentals === 'function') renderArchivedIncidentals();
 };
 
 /* ── Render deposits ── */
@@ -991,6 +993,73 @@ const renderMonthlyExpenseSummary = () => {
   });
   html += '</tbody></table></div>';
   content.innerHTML = html;
+};
+
+/* ── Archived incidentals (shown alongside Monthly Expense Summary) ── */
+const ARCHIVED_INC_HIDDEN_KEY = 'budgetPlanner.archivedIncidentalsHidden';
+const toggleArchivedIncidentalsBtn = document.getElementById('toggleArchivedIncidentals');
+const archivedIncidentalContent = document.getElementById('archivedIncidentalContent');
+
+if (localStorage.getItem(ARCHIVED_INC_HIDDEN_KEY) === null) {
+  localStorage.setItem(ARCHIVED_INC_HIDDEN_KEY, '1');
+}
+
+const applyArchivedIncidentalsVisibility = () => {
+  const hidden = localStorage.getItem(ARCHIVED_INC_HIDDEN_KEY) === '1';
+  archivedIncidentalContent.style.display = hidden ? 'none' : '';
+  toggleArchivedIncidentalsBtn.textContent = hidden ? 'Show' : 'Hide';
+};
+
+toggleArchivedIncidentalsBtn.addEventListener('click', () => {
+  const hidden = localStorage.getItem(ARCHIVED_INC_HIDDEN_KEY) === '1';
+  const newVal = hidden ? '0' : '1';
+  localStorage.setItem(ARCHIVED_INC_HIDDEN_KEY, newVal);
+  window.cloudSync?.saveSetting(ARCHIVED_INC_HIDDEN_KEY, newVal);
+  applyArchivedIncidentalsVisibility();
+});
+
+const renderArchivedIncidentals = () => {
+  applyArchivedIncidentalsVisibility();
+  const container = archivedIncidentalContent;
+  container.innerHTML = '';
+
+  const keys = Object.keys(state.archivedIncidentals || {}).sort().reverse();
+  if (!keys.length) {
+    container.innerHTML = '<p class="muted" style="text-align:center">No archived incidentals yet.</p>';
+    return;
+  }
+
+  keys.forEach(mk => {
+    const items = (state.archivedIncidentals[mk] || []).map((a, ai) => ({ ...a, _archived: true, _archiveMonth: mk, _archIdx: ai }));
+    if (!items.length) return;
+    const total = items.reduce((s, it) => s + Number(it.amount || 0), 0);
+
+    const group = document.createElement('div');
+    group.className = 'month-group';
+
+    const header = document.createElement('div');
+    header.className = 'month-header collapsed';
+    header.innerHTML = `
+      <span>
+        <span class="chevron">&#9660;</span>
+        ${monthLabel(mk)} (${items.length} item${items.length !== 1 ? 's' : ''})
+      </span>
+      <span class="month-total">-${formatMoney(total)}</span>
+    `;
+
+    const body = document.createElement('div');
+    body.className = 'month-body collapsed';
+
+    header.addEventListener('click', () => {
+      header.classList.toggle('collapsed');
+      body.classList.toggle('collapsed');
+    });
+
+    body.appendChild(buildIncidentalTable(items));
+    group.appendChild(header);
+    group.appendChild(body);
+    container.appendChild(group);
+  });
 };
 
 /* ── Monthly breakdown (income / expense / ending balance per month) ── */
@@ -1957,8 +2026,8 @@ elements.addIncidental.addEventListener("click", () => {
   renderIncidentals(); saveState(); calculateEndingBalance(); renderNegativeAlert();
 });
 
-/* ── Events: incidental remove / archive / edit ── */
-elements.incidentalGroups.addEventListener("click", (e) => {
+/* ── Events: incidental remove / archive / edit (shared by active + archived lists) ── */
+const handleIncidentalClick = (e) => {
   const action = e.target.dataset.action;
 
   if (action === "edit-inc") {
@@ -2078,7 +2147,9 @@ elements.incidentalGroups.addEventListener("click", (e) => {
 
   state.incidentals.splice(idx, 1);
   renderIncidentals(); saveState(); calculateEndingBalance(); renderNegativeAlert();
-});
+};
+elements.incidentalGroups.addEventListener("click", handleIncidentalClick);
+archivedIncidentalContent.addEventListener("click", handleIncidentalClick);
 
 /* ── Events: deposit remove / cancel ── */
 elements.depositTable.addEventListener("click", (e) => {
