@@ -232,7 +232,7 @@ const getTransactionsForDay = (day) => {
     if (bill.manualPayments && bill.manualPayments.length) {
       bill.manualPayments.forEach(mp => {
         if (mp.date && d.getTime() === startOfDay(toDate(mp.date)).getTime())
-          txns.push({ name: bill.name + " (manual pay)", amount: amt, type: bill.type || "expense" });
+          txns.push({ name: bill.name + " (manual pay)", amount: Number(mp.amount != null ? mp.amount : amt), type: bill.type || "expense" });
       });
       if (bill.interval === "monthly") {
         manualPaidThisPeriod = bill.manualPayments.some(mp => {
@@ -1963,11 +1963,12 @@ elements.billTable.addEventListener("click", (e) => {
   if (!bill) return;
   const now = new Date();
   const payDate = `${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
+  const paidAmount = Number(bill.amount || 0);
   if (!bill.manualPayments) bill.manualPayments = [];
-  bill.manualPayments.push({ date: payDate });
+  bill.manualPayments.push({ date: payDate, amount: paidAmount });
   renderBills(); renderPausedBills(); saveState(); calculateEndingBalance(); renderNegativeAlert(); renderMonthlyExpenseSummary();
   if (bill.debtId) {
-    recordPaymentToDebtPlanner(bill.debtId, Number(bill.amount || 0), payDate);
+    recordPaymentToDebtPlanner(bill.debtId, paidAmount, payDate);
     runDebtPlannerSync(true);
   }
 });
