@@ -1965,14 +1965,6 @@ elements.billTable.addEventListener("click", (e) => {
   const payDate = `${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
   if (!bill.manualPayments) bill.manualPayments = [];
   bill.manualPayments.push({ date: payDate });
-  const payD = startOfDay(toDate(payDate));
-  const balD = startOfDay(toDate(state.balanceDate));
-  if (payD.getTime() <= balD.getTime()) {
-    const amt = Number(bill.amount || 0);
-    state.startingBalance += bill.type === "income" ? amt : -amt;
-    state.startingBalance = Math.round(state.startingBalance * 100) / 100;
-    elements.startingBalance.value = state.startingBalance;
-  }
   renderBills(); renderPausedBills(); saveState(); calculateEndingBalance(); renderNegativeAlert(); renderMonthlyExpenseSummary();
   if (bill.debtId) {
     recordPaymentToDebtPlanner(bill.debtId, Number(bill.amount || 0), payDate);
