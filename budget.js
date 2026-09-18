@@ -911,21 +911,29 @@ const renderMonthlyExpenseSummary = () => {
 
   let runBal = Number(state.startingBalance || 0);
   const balStart = startOfDay(toDate(state.balanceDate));
-  const walkStart2 = new Date(balStart);
 
-  if (walkStart2 < monthStart) {
-    const pre = new Date(walkStart2);
+  if (balStart < monthStart) {
+    // Balance is anchored before this month: walk forward to find the balance at month start.
+    const pre = new Date(balStart);
     while (pre < monthStart) {
       const preTxns = getTransactionsForDay(pre);
       preTxns.forEach(t => { runBal += t.type === 'income' ? t.amount : -t.amount; });
       pre.setDate(pre.getDate() + 1);
     }
+  } else if (balStart > monthStart) {
+    // Balance is anchored after this month (current/past month view): walk backward from the
+    // anchor to undo each day's effect, recovering the balance as it stood at month start.
+    const pre = new Date(monthStart);
+    while (pre < balStart) {
+      const preTxns = getTransactionsForDay(pre);
+      preTxns.forEach(t => { runBal -= t.type === 'income' ? t.amount : -t.amount; });
+      pre.setDate(pre.getDate() + 1);
+    }
   }
 
   const openingBalance = runBal;
-  const trackFrom = walkStart2 > monthStart ? new Date(walkStart2) : new Date(monthStart);
-  let lowestBal = runBal, lowestDate = trackFrom;
-  const dayCursor = new Date(trackFrom);
+  let lowestBal = runBal, lowestDate = new Date(monthStart);
+  const dayCursor = new Date(monthStart);
   while (dayCursor <= monthEnd) {
     const dayTxns = getTransactionsForDay(dayCursor);
     dayTxns.forEach(t => {
@@ -976,17 +984,12 @@ const renderMonthlyExpenseSummary = () => {
   items.forEach((it, i) => { if (startOfDay(it.rawDate).getTime() <= todayMs) lastPaidIdx = i; });
 
   let rowBal = openingBalance;
-  const balDateMs = startOfDay(toDate(state.balanceDate)).getTime();
   items.forEach((it, i) => {
     const color = it.type === 'income' ? '#16a34a' : '#dc2626';
     const sign = it.type === 'income' ? '+' : '-';
-    const itemMs = startOfDay(it.rawDate).getTime();
-    const isBeforeBalance = itemMs <= balDateMs;
-    if (!isBeforeBalance) {
-      rowBal += it.type === 'income' ? it.amount : -it.amount;
-    }
-    const balText = isBeforeBalance ? '\u2014' : formatMoney(rowBal);
-    const balColor = isBeforeBalance ? 'var(--muted)' : (rowBal < 0 ? '#dc2626' : '#16a34a');
+    rowBal += it.type === 'income' ? it.amount : -it.amount;
+    const balText = formatMoney(rowBal);
+    const balColor = rowBal < 0 ? '#dc2626' : '#16a34a';
     const isLastPaid = i === lastPaidIdx;
     const rowStyle = isLastPaid ? 'background:#dbeafe;border-left:4px solid #2563eb' : '';
     html += `<tr style="${rowStyle}"><td style="padding:4px 8px">${isLastPaid ? '<span style="color:#2563eb;font-weight:700;margin-right:4px">&#9658;</span>' : ''}${it.date}</td><td style="padding:4px 8px">${it.name}</td><td style="padding:4px 8px;text-align:right;color:${color}">${sign}${formatMoney(it.amount)}</td><td style="padding:4px 8px;text-align:right;font-weight:600;color:${balColor}">${balText}</td></tr>`;
@@ -1842,8 +1845,8 @@ elements.exportBills.addEventListener("click", () => {
 });
 
 /* ── Events: balance & dates ── */
-elements.startingBalance.addEventListener("input", e => { state.startingBalance=Number(e.target.value||0); saveState(); calculateEndingBalance(); renderNegativeAlert(); });
-elements.balanceDate.addEventListener("change", e => { state.balanceDate=e.target.value; saveState(); calculateEndingBalance(); renderNegativeAlert(); });
+elements.startingBalance.addEventListener("input", e => { state.startingBalance=Number(e.target.value||0); saveState(); calculateEndingBalance(); renderNegativeAlert(); renderMonthlyExpenseSummary(); });
+elements.balanceDate.addEventListener("change", e => { state.balanceDate=e.target.value; saveState(); calculateEndingBalance(); renderNegativeAlert(); renderMonthlyExpenseSummary(); });
 elements.checkDate.addEventListener("change", e => { state.checkDate=e.target.value; saveState(); calculateEndingBalance(); renderNegativeAlert(); });
 
 /* ── Events: bill table edits ── */
