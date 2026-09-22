@@ -574,6 +574,17 @@ const calculateEndingBalance = () => {
   calculateCurrentBalance();
   const balance = Number(state.startingBalance||0);
   const bd = toDate(state.balanceDate), cd = toDate(state.checkDate);
+  const summaryDiv = document.getElementById("billsSummary");
+  if (cd < bd) {
+    const bdStr = bd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    elements.endingBalance.textContent = '—';
+    elements.balanceState.textContent = 'Before balance date';
+    elements.balanceState.className = 'tag';
+    summaryDiv.innerHTML = `<p class="muted" style="margin-top:8px">Pick a date on or after your Balance Date (${bdStr}) — balances before that date can't be calculated from it.</p>`;
+    if (typeof renderMonthlyExpenseSummary === 'function') renderMonthlyExpenseSummary();
+    if (typeof renderMonthlyBreakdown === 'function') renderMonthlyBreakdown();
+    return;
+  }
   let running = balance;
   const cursor = new Date(bd);
   while (cursor <= cd) {
@@ -586,7 +597,6 @@ const calculateEndingBalance = () => {
   elements.balanceState.className = `tag ${running >= 0 ? "positive" : "negative"}`;
 
   /* Bills summary: incidentals shown for full [balanceDate, checkDate]; recurring bills from today only */
-  const summaryDiv = document.getElementById("billsSummary");
   const todayLocal = startOfDay(new Date());
   const items = [];
   let totalExp = 0, totalInc = 0;
