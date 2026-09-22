@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260619f" />
+  <link rel="stylesheet" href="styles.css?v=20260921a" />
   <script>
     if (localStorage.getItem('budgetStarted') || localStorage.getItem('budgetProfiles')) {
       document.documentElement.classList.add('landing-hidden');
@@ -26,9 +26,9 @@
       <span class="brand-name">Budget Planner</span>
     </a>
     <nav class="nav-links">
-      <a href="#features">Features</a>
       <a href="#planner">Planner</a>
       <a href="#faq">FAQ</a>
+      <a href="https://rbreyer-hub.github.io/debt-planner-web/" target="_blank" rel="noopener">Debt Planner</a>
       <a href="#planner" class="nav-cta">Open planner</a>
     </nav>
     <div class="nav-config-wrap" id="navConfigWrap">
@@ -106,7 +106,6 @@
       </p>
       <div class="hero-cta">
         <button class="btn btn-primary" id="startBudgetBtn">Start your budget <span aria-hidden="true">&rarr;</span></button>
-        <a class="btn btn-ghost" href="#features">How it works</a>
       </div>
       <div class="hero-stats">
         <div><strong>100%</strong><span>private</span></div>
@@ -462,9 +461,9 @@
       <p class="footer-tag">Free, private, browser-only budget planning.</p>
     </div>
     <div class="footer-links">
-      <a href="#features">Features</a>
       <a href="#planner">Planner</a>
       <a href="#faq">FAQ</a>
+      <a href="https://rbreyer-hub.github.io/debt-planner-web/" target="_blank" rel="noopener">Debt Planner</a>
       <a href="#" id="changelogLink">Changelog</a>
     </div>
     <p class="footer-copy">&copy; <span id="year"></span> Budget Planner. Your money, your machine.</p>
@@ -696,17 +695,6 @@
         if (!document.documentElement.classList.contains('landing-hidden')) {
           e.preventDefault();
           enterPlanner();
-        }
-      });
-    });
-
-    // "Features" links reveal the landing sections
-    document.querySelectorAll('a[href="#features"]').forEach(link => {
-      link.addEventListener('click', (e) => {
-        if (document.documentElement.classList.contains('landing-hidden')) {
-          e.preventDefault();
-          document.documentElement.classList.remove('landing-hidden');
-          setTimeout(() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }), 20);
         }
       });
     });

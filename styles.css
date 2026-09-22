@@ -344,8 +344,7 @@ p  { margin: 0; }
 
 /* ── Landing-hidden state (first-time onboarding complete) ── */
 html.landing-hidden .hero,
-html.landing-hidden .marquee,
-html.landing-hidden #features {
+html.landing-hidden .marquee {
   display: none;
 }
 
