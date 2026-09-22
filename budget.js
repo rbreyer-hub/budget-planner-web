@@ -1944,6 +1944,7 @@ elements.billTable.addEventListener("click", (e) => {
   if (!bill) return;
   const curMk = currentMonthKey();
   bill.includedInBalance = bill.includedInBalance === curMk ? null : curMk;
+  if (bill.includedInBalance) bill.notInBalance = null;
   renderBills(); renderPausedBills(); saveState(); calculateEndingBalance(); renderNegativeAlert();
 });
 
@@ -1954,6 +1955,7 @@ elements.billTable.addEventListener("click", (e) => {
   if (!bill) return;
   const curMk = currentMonthKey();
   bill.notInBalance = bill.notInBalance === curMk ? null : curMk;
+  if (bill.notInBalance) bill.includedInBalance = null;
   renderBills(); renderPausedBills(); saveState(); calculateEndingBalance(); renderNegativeAlert();
 });
 
