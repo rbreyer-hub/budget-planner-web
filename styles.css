@@ -342,6 +342,13 @@ p  { margin: 0; }
 }
 .btn-ghost:hover { background: rgba(255,255,255,0.12); }
 
+/* ── Landing-hidden state (first-time onboarding complete) ── */
+html.landing-hidden .hero,
+html.landing-hidden .marquee,
+html.landing-hidden #features {
+  display: none;
+}
+
 /* ── Hero ────────────────────────────────────────────── */
 .hero {
   position: relative;

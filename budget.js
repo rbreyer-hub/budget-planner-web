@@ -751,8 +751,7 @@ const renderBills = () => {
         ${bill.interval!=="one-time"?`<button class="pay-today" data-action="pay-today" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px"${hasManualPayToday?' disabled':''}>Pay Today</button>`:""}
         ${hasManualPayThisMonth?`<button class="danger" data-action="undo-pay" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">Undo Pay</button>`:""}
         ${bill.interval!=="one-time"?`<button class="${isPaused?'secondary':'warn'}" data-action="toggle-pause" data-index="${i}" style="width:auto;display:inline-block">${isPaused?'Resume':'Pause'}</button>`:""}
-        <button class="${isInBal?'secondary':''}" data-action="toggle-in-balance" data-index="${i}" style="width:auto;display:inline-block;margin-left:4px;${isInBal?'background:#1d4ed8;color:#fff':''}">In Balance</button>
-        ${(isPaid || isPastDue) ? `<button class="${isNotInBal?'':'secondary'}" data-action="toggle-not-in-balance" data-index="${i}" style="width:auto;display:inline-block;margin-left:4px;${isNotInBal?'background:#dc2626;color:#fff':''}">Not In Balance</button>` : ''}
+        <button class="${isNotInBal?'':(isInBal?'':'secondary')}" data-action="toggle-balance-flag" data-index="${i}" style="width:auto;display:inline-block;margin-left:4px;${isInBal?'background:#1d4ed8;color:#fff':(isNotInBal?'background:#dc2626;color:#fff':'')}">${isNotInBal?'Not In Balance':'In Balance'}</button>
       </td>`;
     if (isPaused) row.className = "row-paused";
     else if (isPastDue) row.className = "row-past-due";
@@ -1937,25 +1936,21 @@ elements.billTable.addEventListener("click", (e) => {
   }
 });
 
-/* ── Events: toggle included in balance ── */
+/* ── Events: toggle balance flag (cycles: none → In Balance → Not In Balance → none) ── */
 elements.billTable.addEventListener("click", (e) => {
-  if (e.target.dataset.action !== "toggle-in-balance") return;
+  if (e.target.dataset.action !== "toggle-balance-flag") return;
   const idx = Number(e.target.dataset.index), bill = state.bills[idx];
   if (!bill) return;
   const curMk = currentMonthKey();
-  bill.includedInBalance = bill.includedInBalance === curMk ? null : curMk;
-  if (bill.includedInBalance) bill.notInBalance = null;
-  renderBills(); renderPausedBills(); saveState(); calculateEndingBalance(); renderNegativeAlert();
-});
-
-/* ── Events: toggle not in balance (past due) ── */
-elements.billTable.addEventListener("click", (e) => {
-  if (e.target.dataset.action !== "toggle-not-in-balance") return;
-  const idx = Number(e.target.dataset.index), bill = state.bills[idx];
-  if (!bill) return;
-  const curMk = currentMonthKey();
-  bill.notInBalance = bill.notInBalance === curMk ? null : curMk;
-  if (bill.notInBalance) bill.includedInBalance = null;
+  if (bill.includedInBalance === curMk) {
+    bill.includedInBalance = null;
+    bill.notInBalance = curMk;
+  } else if (bill.notInBalance === curMk) {
+    bill.notInBalance = null;
+  } else {
+    bill.includedInBalance = curMk;
+    bill.notInBalance = null;
+  }
   renderBills(); renderPausedBills(); saveState(); calculateEndingBalance(); renderNegativeAlert();
 });
 
