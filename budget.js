@@ -95,6 +95,7 @@ const elements = {
   loanAmount:       document.getElementById("loanAmount"),
   loanDate:         document.getElementById("loanDate"),
   loanRepayDate:    document.getElementById("loanRepayDate"),
+  loanOwed:         document.getElementById("loanOwed"),
   addLoan:          document.getElementById("addLoan"),
   loanTable:        document.getElementById("loanTable"),
   loanSummary:      document.getElementById("loanSummary")
@@ -291,7 +292,7 @@ const getTransactionsForDay = (day) => {
   });
   (state.loans || []).forEach((loan) => {
     if (loan.date && d.getTime() === startOfDay(toDate(loan.date)).getTime())
-      txns.push({ name: "\uD83D\uDCB0 " + loan.name, amount: Number(loan.amount||0), type: "income" });
+      txns.push({ name: "\uD83D\uDCB0 " + loan.name + (loan.owed ? " (owed, not income)" : ""), amount: Number(loan.amount||0), type: "income", notIncome: loan.owed === true });
     if (loan.repaid && loan.repaidDate && d.getTime() === startOfDay(toDate(loan.repaidDate)).getTime())
       txns.push({ name: "\uD83D\uDCB0 Repay: " + loan.name, amount: Number(loan.amount||0), type: "expense" });
     if (!loan.repaid && !loan.paused && loan.scheduledRepayDate && d.getTime() === startOfDay(toDate(loan.scheduledRepayDate)).getTime())
@@ -522,6 +523,7 @@ const renderLoans = () => {
       actionsHtml += `<button class="pay-today" data-action="repay-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">Mark Repaid</button>`;
       actionsHtml += `<button class="${loan.paused ? 'secondary' : 'warn'}" data-action="toggle-pause-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">${loan.paused ? 'Resume' : 'Pause'}</button>`;
     }
+    actionsHtml += `<button class="secondary" data-action="toggle-owed-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">${loan.owed ? 'Mark as Income' : 'Mark as Owed'}</button>`;
     actionsHtml += `<button class="danger" data-action="delete-loan" data-index="${i}" style="width:auto;display:inline-block">Delete</button>`;
 
     if (loan.paused) { row.className = "row-paused"; }
@@ -529,7 +531,7 @@ const renderLoans = () => {
     else if (isDueToday) { row.className = "row-today"; }
 
     row.innerHTML = `
-      <td>${isDueToday && !loan.paused ? '<span class="today-arrow">\u25B6</span>' : ''}${loan.name}</td>
+      <td>${isDueToday && !loan.paused ? '<span class="today-arrow">\u25B6</span>' : ''}${loan.name}${loan.owed ? '<span class="pause-badge" style="background:#7c3aed;color:#fff">Owed, not income</span>' : ''}</td>
       <td><input type="number" step="0.01" data-action="edit-amount" data-index="${i}" value="${loan.amount}" style="width:90px" /></td>
       <td>${dd}</td>
       <td>${schedHtml}</td>
@@ -614,7 +616,7 @@ const calculateEndingBalance = () => {
       if (!isPast || isIncidental) {
         items.push({ date: ds, name: t.name, amount: t.amount, type: t.type, balance: runBal, isPast });
         if (!isPast) {
-          if (t.type === 'income') totalInc += t.amount; else totalExp += t.amount;
+          if (t.type === 'income') { if (!t.notIncome) totalInc += t.amount; } else totalExp += t.amount;
         }
       }
     });
@@ -913,7 +915,7 @@ const renderMonthlyExpenseSummary = () => {
     txns.forEach(t => {
       const ds = cursor.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       items.push({ date: ds, rawDate: new Date(cursor), name: t.name, amount: t.amount, type: t.type });
-      if (t.type === 'income') totalIncome += t.amount; else totalExpense += t.amount;
+      if (t.type === 'income') { if (!t.notIncome) totalIncome += t.amount; } else totalExpense += t.amount;
     });
     cursor.setDate(cursor.getDate() + 1);
   }
@@ -1148,7 +1150,7 @@ const renderMonthlyBreakdown = () => {
     txns.forEach(t => {
       months[currentMonthIdx].txns.push({ date: new Date(cursor), ...t, isPostBalance });
       if (t.type === 'income') {
-        months[currentMonthIdx].income += t.amount;
+        if (!t.notIncome) months[currentMonthIdx].income += t.amount;
         if (isPostBalance) runBal += t.amount;
         else if (currentMonthIdx === 0) preBalanceNet += t.amount;
       } else {
@@ -2201,11 +2203,12 @@ elements.addLoan.addEventListener("click", () => {
   const amount = Number(elements.loanAmount.value || 0);
   const date = elements.loanDate.value || todayIso;
   const scheduledRepayDate = elements.loanRepayDate.value || null;
+  const owed = !!elements.loanOwed.checked;
   if (!name || !amount) return;
   if (!state.loans) state.loans = [];
-  state.loans.push({ name, amount, date, scheduledRepayDate, repaid: false, repaidDate: null, paused: false });
+  state.loans.push({ name, amount, date, scheduledRepayDate, repaid: false, repaidDate: null, paused: false, owed });
   elements.loanName.value = ""; elements.loanAmount.value = "";
-  elements.loanDate.value = todayIso; elements.loanRepayDate.value = "";
+  elements.loanDate.value = todayIso; elements.loanRepayDate.value = ""; elements.loanOwed.checked = false;
   renderLoans(); saveState(); calculateEndingBalance(); renderNegativeAlert();
 });
 
@@ -2236,6 +2239,12 @@ elements.loanTable.addEventListener("click", (e) => {
 
   if (action === "toggle-pause-loan") {
     loan.paused = !loan.paused;
+    renderLoans(); saveState(); calculateEndingBalance(); renderNegativeAlert();
+    return;
+  }
+
+  if (action === "toggle-owed-loan") {
+    loan.owed = !loan.owed;
     renderLoans(); saveState(); calculateEndingBalance(); renderNegativeAlert();
     return;
   }

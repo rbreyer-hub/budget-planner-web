@@ -398,6 +398,10 @@
             <button id="addLoan" style="width:auto; padding:8px 18px;">Add Loan</button>
           </div>
         </div>
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400;margin-top:8px">
+          <input id="loanOwed" type="checkbox" style="width:auto" />
+          I owe this to someone &mdash; not income
+        </label>
         <div id="loanSummary" class="incidental-summary" style="display:none"></div>
         <div style="overflow-x:auto">
         <table>
@@ -615,7 +619,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="auth.js?v=20260618f"></script>
-<script src="budget.js?v=20260921b"></script>
+<script src="budget.js?v=20260923a"></script>
 <script>
   /* Nav scroll state + mobile toggle + year + reveal animations */
   (function () {
