@@ -473,39 +473,25 @@ const renderDeposits = () => {
 /* ── Render loans ── */
 const renderLoans = () => {
   elements.loanTable.innerHTML = "";
-  if (!state.loans || !state.loans.length) {
-    elements.loanTable.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center">No loans yet. Pull money from another account and track it here.</td></tr>';
-    elements.loanSummary.style.display = "none";
-    return;
-  }
-  let totalOutstanding = 0, totalRepaid = 0, totalPaused = 0;
+  let totalOutstanding = 0, totalRepaid = 0, totalPaused = 0, activeRows = 0;
   const todayD = startOfDay(new Date());
-  state.loans.forEach((loan, i) => {
-    if (loan.repaid) totalRepaid += Number(loan.amount || 0);
-    else if (loan.paused) totalPaused += Number(loan.amount || 0);
+  (state.loans || []).forEach((loan, i) => {
+    if (loan.repaid) { totalRepaid += Number(loan.amount || 0); return; }
+    if (loan.paused) totalPaused += Number(loan.amount || 0);
     else totalOutstanding += Number(loan.amount || 0);
+    activeRows++;
 
     const row = document.createElement("tr");
-    const dd = loan.date ? new Date(loan.date+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "\u2014";
+    const dd = loan.date ? new Date(loan.date+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "—";
 
-    const schedDate = loan.scheduledRepayDate
-      ? new Date(loan.scheduledRepayDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})
-      : null;
-    const isOverdue = !loan.repaid && !loan.paused && loan.scheduledRepayDate && startOfDay(toDate(loan.scheduledRepayDate)) < todayD;
-    const isDueToday = !loan.repaid && !loan.paused && loan.scheduledRepayDate && startOfDay(toDate(loan.scheduledRepayDate)).getTime() === todayD.getTime();
-    let schedHtml = '';
-    if (loan.repaid) {
-      schedHtml = schedDate ? `<span class="muted">${schedDate}</span>` : '\u2014';
-    } else {
-      schedHtml = `<input type="date" data-action="edit-sched" data-index="${i}" value="${loan.scheduledRepayDate || ''}" style="width:140px" />`;
-      if (isOverdue) schedHtml += ' <span style="color:#dc2626;font-weight:600;font-size:11px">OVERDUE</span>';
-      else if (isDueToday) schedHtml += ' <span style="color:#f59e0b;font-weight:600;font-size:11px">DUE TODAY</span>';
-    }
+    const isOverdue = !loan.paused && loan.scheduledRepayDate && startOfDay(toDate(loan.scheduledRepayDate)) < todayD;
+    const isDueToday = !loan.paused && loan.scheduledRepayDate && startOfDay(toDate(loan.scheduledRepayDate)).getTime() === todayD.getTime();
+    let schedHtml = `<input type="date" data-action="edit-sched" data-index="${i}" value="${loan.scheduledRepayDate || ''}" style="width:140px" />`;
+    if (isOverdue) schedHtml += ' <span style="color:#dc2626;font-weight:600;font-size:11px">OVERDUE</span>';
+    else if (isDueToday) schedHtml += ' <span style="color:#f59e0b;font-weight:600;font-size:11px">DUE TODAY</span>';
 
     let statusHtml;
-    if (loan.repaid) {
-      statusHtml = `<span style="color:#16a34a;font-weight:600">\u2713 Repaid${loan.repaidDate ? ' ' + new Date(loan.repaidDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}) : ''}</span>`;
-    } else if (loan.paused) {
+    if (loan.paused) {
       statusHtml = '<span class="pause-badge">Paused</span>';
     } else if (isOverdue) {
       statusHtml = '<span style="color:#dc2626;font-weight:600">Outstanding</span>';
@@ -517,23 +503,17 @@ const renderLoans = () => {
       statusHtml = '<span style="color:#dc2626;font-weight:600">Outstanding</span>';
     }
 
-    let actionsHtml = '';
-    if (loan.repaid) {
-      actionsHtml = `<button class="secondary" data-action="unrepay-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">Undo Repay</button>`;
-    } else {
-      actionsHtml += `<button class="pay-today" data-action="repay-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">Mark Repaid</button>`;
-      actionsHtml += `<button class="${loan.paused ? 'secondary' : 'warn'}" data-action="toggle-pause-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">${loan.paused ? 'Resume' : 'Pause'}</button>`;
-    }
+    let actionsHtml = `<button class="pay-today" data-action="repay-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">Mark Repaid</button>`;
+    actionsHtml += `<button class="${loan.paused ? 'secondary' : 'warn'}" data-action="toggle-pause-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">${loan.paused ? 'Resume' : 'Pause'}</button>`;
     actionsHtml += `<button class="secondary" data-action="toggle-owed-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">${loan.owed ? 'Mark as Income' : 'Mark as Owed'}</button>`;
     actionsHtml += `<button class="secondary" data-action="toggle-inbalance-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">${loan.inBalance ? 'Add To Balance' : 'Already In Balance'}</button>`;
     actionsHtml += `<button class="danger" data-action="delete-loan" data-index="${i}" style="width:auto;display:inline-block">Delete</button>`;
 
     if (loan.paused) { row.className = "row-paused"; }
-    else if (loan.repaid) { row.className = "row-paid"; }
     else if (isDueToday) { row.className = "row-today"; }
 
     row.innerHTML = `
-      <td>${isDueToday && !loan.paused ? '<span class="today-arrow">\u25B6</span>' : ''}${loan.name}${loan.owed ? '<span class="pause-badge" style="background:#7c3aed;color:#fff">Owed, not income</span>' : ''}${loan.inBalance ? '<span class="pause-badge" style="background:#dbeafe;color:#1d4ed8">In Balance</span>' : ''}</td>
+      <td>${isDueToday && !loan.paused ? '<span class="today-arrow">▶</span>' : ''}${loan.name}${loan.owed ? '<span class="pause-badge" style="background:#7c3aed;color:#fff">Owed, not income</span>' : ''}${loan.inBalance ? '<span class="pause-badge" style="background:#dbeafe;color:#1d4ed8">In Balance</span>' : ''}</td>
       <td><input type="number" step="0.01" data-action="edit-amount" data-index="${i}" value="${loan.amount}" style="width:90px" /></td>
       <td>${dd}</td>
       <td>${schedHtml}</td>
@@ -541,14 +521,25 @@ const renderLoans = () => {
       <td style="white-space:nowrap">${actionsHtml}</td>`;
     elements.loanTable.appendChild(row);
   });
-  const sumEl = elements.loanSummary;
-  sumEl.style.display = "flex";
-  sumEl.innerHTML = `
-    <span><strong>Outstanding:</strong> <span style="color:var(--danger)">${formatMoney(totalOutstanding)}</span></span>
-    ${totalPaused ? `<span><strong>Paused:</strong> <span style="color:#92400e">${formatMoney(totalPaused)}</span></span>` : ''}
-    <span><strong>Repaid:</strong> <span style="color:#16a34a">${formatMoney(totalRepaid)}</span></span>
-    <span><strong>Total borrowed:</strong> ${formatMoney(totalOutstanding + totalRepaid + totalPaused)}</span>
-  `;
+
+  if (!activeRows) {
+    elements.loanTable.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center">No active loans. Add one above, or check the archive below for repaid loans.</td></tr>';
+  }
+
+  if (!state.loans || !state.loans.length) {
+    elements.loanSummary.style.display = "none";
+  } else {
+    const sumEl = elements.loanSummary;
+    sumEl.style.display = "flex";
+    sumEl.innerHTML = `
+      <span><strong>Outstanding:</strong> <span style="color:var(--danger)">${formatMoney(totalOutstanding)}</span></span>
+      ${totalPaused ? `<span><strong>Paused:</strong> <span style="color:#92400e">${formatMoney(totalPaused)}</span></span>` : ''}
+      <span><strong>Repaid:</strong> <span style="color:#16a34a">${formatMoney(totalRepaid)}</span></span>
+      <span><strong>Total borrowed:</strong> ${formatMoney(totalOutstanding + totalRepaid + totalPaused)}</span>
+    `;
+  }
+
+  renderArchivedLoans();
 };
 
 /* ── Current balance: starting balance + transactions through today ── */
@@ -2215,8 +2206,8 @@ elements.addLoan.addEventListener("click", () => {
   renderLoans(); saveState(); calculateEndingBalance(); renderNegativeAlert();
 });
 
-/* ── Events: loan actions ── */
-elements.loanTable.addEventListener("click", (e) => {
+/* ── Events: loan actions (shared by the active table and the archive) ── */
+const handleLoanTableClick = (e) => {
   const action = e.target.dataset.action;
   if (!action) return;
   const idx = Number(e.target.dataset.index);
@@ -2263,7 +2254,8 @@ elements.loanTable.addEventListener("click", (e) => {
     renderLoans(); saveState(); calculateEndingBalance(); renderNegativeAlert();
     return;
   }
-});
+};
+elements.loanTable.addEventListener("click", handleLoanTableClick);
 
 /* ── Events: loan scheduled date / amount change ── */
 elements.loanTable.addEventListener("change", (e) => {
@@ -2284,6 +2276,61 @@ elements.loanTable.addEventListener("change", (e) => {
     return;
   }
 });
+
+/* ── Archived loans (repaid loans, hidden by default) ── */
+const ARCHIVED_LOANS_HIDDEN_KEY = 'budgetPlanner.archivedLoansHidden';
+const toggleArchivedLoansBtn = document.getElementById('toggleArchivedLoans');
+const archivedLoansContent = document.getElementById('archivedLoansContent');
+
+if (localStorage.getItem(ARCHIVED_LOANS_HIDDEN_KEY) === null) {
+  localStorage.setItem(ARCHIVED_LOANS_HIDDEN_KEY, '1');
+}
+
+const applyArchivedLoansVisibility = () => {
+  const hidden = localStorage.getItem(ARCHIVED_LOANS_HIDDEN_KEY) === '1';
+  archivedLoansContent.style.display = hidden ? 'none' : '';
+  toggleArchivedLoansBtn.textContent = hidden ? 'Show' : 'Hide';
+};
+
+toggleArchivedLoansBtn.addEventListener('click', () => {
+  const hidden = localStorage.getItem(ARCHIVED_LOANS_HIDDEN_KEY) === '1';
+  const newVal = hidden ? '0' : '1';
+  localStorage.setItem(ARCHIVED_LOANS_HIDDEN_KEY, newVal);
+  window.cloudSync?.saveSetting(ARCHIVED_LOANS_HIDDEN_KEY, newVal);
+  applyArchivedLoansVisibility();
+});
+
+const renderArchivedLoans = () => {
+  applyArchivedLoansVisibility();
+  const archived = (state.loans || [])
+    .map((loan, i) => ({ loan, i }))
+    .filter(({ loan }) => loan.repaid);
+
+  if (!archived.length) {
+    archivedLoansContent.innerHTML = '<p class="muted" style="text-align:center">No archived loans yet.</p>';
+    return;
+  }
+
+  let html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">';
+  html += '<thead><tr><th>Description</th><th>Amount</th><th>Loan Date</th><th>Repaid Date</th><th>Actions</th></tr></thead><tbody>';
+  archived.forEach(({ loan, i }) => {
+    const dd = loan.date ? new Date(loan.date+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "—";
+    const rd = loan.repaidDate ? new Date(loan.repaidDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "—";
+    html += `<tr>
+      <td>${loan.name}${loan.owed ? '<span class="pause-badge" style="background:#7c3aed;color:#fff">Owed, not income</span>' : ''}</td>
+      <td>${formatMoney(loan.amount)}</td>
+      <td>${dd}</td>
+      <td>${rd}</td>
+      <td style="white-space:nowrap">
+        <button class="secondary" data-action="unrepay-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">Undo Repay</button>
+        <button class="danger" data-action="delete-loan" data-index="${i}" style="width:auto;display:inline-block">Delete</button>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  archivedLoansContent.innerHTML = html;
+};
+archivedLoansContent.addEventListener('click', handleLoanTableClick);
 
 /* ── Optional sections (loans toggle) ── */
 const LOANS_VISIBLE_KEY = 'budgetPlanner.loansVisible';

@@ -424,6 +424,17 @@
         </div>
       </section>
 
+      <section class="card" id="archivedLoansCard">
+        <div class="row" style="align-items: flex-end;">
+          <h2 style="margin: 0; flex: 1;">&#128193; Archived Loans</h2>
+          <div style="flex:0 0 auto; align-self: flex-end;">
+            <button id="toggleArchivedLoans" class="secondary" style="width:auto; padding:8px 14px;">Show</button>
+          </div>
+        </div>
+        <p class="muted">Loans that have been marked repaid. Hidden by default to keep the active loan list short.</p>
+        <div id="archivedLoansContent"></div>
+      </section>
+
     </div><!-- /.planner-shell -->
   </section>
 
@@ -622,8 +633,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="auth.js?v=20260618f"></script>
-<script src="budget.js?v=20260923b"></script>
+<script src="auth.js?v=20260923a"></script>
+<script src="budget.js?v=20260923c"></script>
 <script>
   /* Nav scroll state + mobile toggle + year + reveal animations */
   (function () {

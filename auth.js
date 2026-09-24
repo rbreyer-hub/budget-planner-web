@@ -348,16 +348,23 @@
         .catch(e => console.warn('[BudgetSync] saveProfiles failed:', e));
     },
 
-    saveSetting(key, value) {
+    async saveSetting(key, value) {
       if (!currentUser) return;
       markSaving();
-      userRef(currentUser.uid)
-        .set({
-          ['settings_' + key.replace(/\./g, '_')]: value,
+      const ref = userRef(currentUser.uid);
+      try {
+        const snap = await ref.get();
+        let settings = {};
+        try { settings = JSON.parse(snap.data()?.settings || '{}'); } catch (_) {}
+        settings[key] = value;
+        await ref.set({
+          settings:  JSON.stringify(settings),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true })
-        .then(syncLocalTsAfterWrite)
-        .catch(e => console.warn('[BudgetSync] saveSetting failed:', e));
+        }, { merge: true });
+        syncLocalTsAfterWrite();
+      } catch (e) {
+        console.warn('[BudgetSync] saveSetting failed:', e);
+      }
     }
   };
 })();
