@@ -96,6 +96,7 @@ const elements = {
   loanDate:         document.getElementById("loanDate"),
   loanRepayDate:    document.getElementById("loanRepayDate"),
   loanOwed:         document.getElementById("loanOwed"),
+  loanInBalance:    document.getElementById("loanInBalance"),
   addLoan:          document.getElementById("addLoan"),
   loanTable:        document.getElementById("loanTable"),
   loanSummary:      document.getElementById("loanSummary")
@@ -291,7 +292,7 @@ const getTransactionsForDay = (day) => {
     });
   });
   (state.loans || []).forEach((loan) => {
-    if (loan.date && d.getTime() === startOfDay(toDate(loan.date)).getTime())
+    if (!loan.inBalance && loan.date && d.getTime() === startOfDay(toDate(loan.date)).getTime())
       txns.push({ name: "\uD83D\uDCB0 " + loan.name + (loan.owed ? " (owed, not income)" : ""), amount: Number(loan.amount||0), type: "income", notIncome: loan.owed === true });
     if (loan.repaid && loan.repaidDate && d.getTime() === startOfDay(toDate(loan.repaidDate)).getTime())
       txns.push({ name: "\uD83D\uDCB0 Repay: " + loan.name, amount: Number(loan.amount||0), type: "expense" });
@@ -524,6 +525,7 @@ const renderLoans = () => {
       actionsHtml += `<button class="${loan.paused ? 'secondary' : 'warn'}" data-action="toggle-pause-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">${loan.paused ? 'Resume' : 'Pause'}</button>`;
     }
     actionsHtml += `<button class="secondary" data-action="toggle-owed-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">${loan.owed ? 'Mark as Income' : 'Mark as Owed'}</button>`;
+    actionsHtml += `<button class="secondary" data-action="toggle-inbalance-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">${loan.inBalance ? 'Add To Balance' : 'Already In Balance'}</button>`;
     actionsHtml += `<button class="danger" data-action="delete-loan" data-index="${i}" style="width:auto;display:inline-block">Delete</button>`;
 
     if (loan.paused) { row.className = "row-paused"; }
@@ -531,7 +533,7 @@ const renderLoans = () => {
     else if (isDueToday) { row.className = "row-today"; }
 
     row.innerHTML = `
-      <td>${isDueToday && !loan.paused ? '<span class="today-arrow">\u25B6</span>' : ''}${loan.name}${loan.owed ? '<span class="pause-badge" style="background:#7c3aed;color:#fff">Owed, not income</span>' : ''}</td>
+      <td>${isDueToday && !loan.paused ? '<span class="today-arrow">\u25B6</span>' : ''}${loan.name}${loan.owed ? '<span class="pause-badge" style="background:#7c3aed;color:#fff">Owed, not income</span>' : ''}${loan.inBalance ? '<span class="pause-badge" style="background:#dbeafe;color:#1d4ed8">In Balance</span>' : ''}</td>
       <td><input type="number" step="0.01" data-action="edit-amount" data-index="${i}" value="${loan.amount}" style="width:90px" /></td>
       <td>${dd}</td>
       <td>${schedHtml}</td>
@@ -2204,11 +2206,12 @@ elements.addLoan.addEventListener("click", () => {
   const date = elements.loanDate.value || todayIso;
   const scheduledRepayDate = elements.loanRepayDate.value || null;
   const owed = !!elements.loanOwed.checked;
+  const inBalance = !!elements.loanInBalance.checked;
   if (!name || !amount) return;
   if (!state.loans) state.loans = [];
-  state.loans.push({ name, amount, date, scheduledRepayDate, repaid: false, repaidDate: null, paused: false, owed });
+  state.loans.push({ name, amount, date, scheduledRepayDate, repaid: false, repaidDate: null, paused: false, owed, inBalance });
   elements.loanName.value = ""; elements.loanAmount.value = "";
-  elements.loanDate.value = todayIso; elements.loanRepayDate.value = ""; elements.loanOwed.checked = false;
+  elements.loanDate.value = todayIso; elements.loanRepayDate.value = ""; elements.loanOwed.checked = false; elements.loanInBalance.checked = false;
   renderLoans(); saveState(); calculateEndingBalance(); renderNegativeAlert();
 });
 
@@ -2245,6 +2248,12 @@ elements.loanTable.addEventListener("click", (e) => {
 
   if (action === "toggle-owed-loan") {
     loan.owed = !loan.owed;
+    renderLoans(); saveState(); calculateEndingBalance(); renderNegativeAlert();
+    return;
+  }
+
+  if (action === "toggle-inbalance-loan") {
+    loan.inBalance = !loan.inBalance;
     renderLoans(); saveState(); calculateEndingBalance(); renderNegativeAlert();
     return;
   }

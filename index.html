@@ -402,6 +402,10 @@
           <input id="loanOwed" type="checkbox" style="width:auto" />
           I owe this to someone &mdash; not income
         </label>
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400;margin-top:4px">
+          <input id="loanInBalance" type="checkbox" style="width:auto" />
+          Already reflected in my starting balance &mdash; don't add again
+        </label>
         <div id="loanSummary" class="incidental-summary" style="display:none"></div>
         <div style="overflow-x:auto">
         <table>
@@ -619,7 +623,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="auth.js?v=20260618f"></script>
-<script src="budget.js?v=20260923a"></script>
+<script src="budget.js?v=20260923b"></script>
 <script>
   /* Nav scroll state + mobile toggle + year + reveal animations */
   (function () {
