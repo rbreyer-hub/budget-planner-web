@@ -2399,6 +2399,25 @@ toggleLoansSection.addEventListener('change', () => {
 });
 applyLoansVisibility();
 
+/* ── Loans section content hide/show (independent of the config toggle above) ── */
+const LOAN_CONTENT_HIDDEN_KEY = 'budgetPlanner.loanContentHidden';
+const loanSectionContent = document.getElementById('loanSectionContent');
+const toggleLoanContent = document.getElementById('toggleLoanContent');
+
+const applyLoanContentVisibility = () => {
+  const hidden = localStorage.getItem(LOAN_CONTENT_HIDDEN_KEY) === '1';
+  loanSectionContent.style.display = hidden ? 'none' : '';
+  toggleLoanContent.textContent = hidden ? 'Show' : 'Hide';
+};
+toggleLoanContent.addEventListener('click', () => {
+  const hidden = localStorage.getItem(LOAN_CONTENT_HIDDEN_KEY) === '1';
+  const newVal = hidden ? '0' : '1';
+  localStorage.setItem(LOAN_CONTENT_HIDDEN_KEY, newVal);
+  window.cloudSync?.saveSetting(LOAN_CONTENT_HIDDEN_KEY, newVal);
+  applyLoanContentVisibility();
+});
+applyLoanContentVisibility();
+
 /* ── Debug breakdown toggle ── */
 const toggleDebugSection = document.getElementById('toggleDebugSection');
 if (toggleDebugSection) {

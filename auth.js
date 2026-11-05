@@ -11,7 +11,8 @@
     'budgetPlanner.appTitle',
     'budgetPlanner.breakdownHidden',
     'budgetPlanner.breakdownMonths',
-    'budgetPlanner.loansVisible'
+    'budgetPlanner.loansVisible',
+    'budgetPlanner.loanContentHidden'
   ];
 
   const auth = firebase.auth();

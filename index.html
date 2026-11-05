@@ -375,8 +375,14 @@
 
 
       <section class="card" id="loansSection">
-        <h2>&#128176; Loans from Other Accounts</h2>
-        <p class="muted">Track money pulled from another account to cover shortfalls. Each entry is an individual loan to pay back. Loans add to your balance on the loan date; repayments deduct on the repaid date.</p>
+        <div class="row" style="align-items: flex-end;">
+          <h2 style="margin: 0; flex: 1;">&#128176; Loans from Other Accounts</h2>
+          <div style="flex:0 0 auto; align-self: flex-end;">
+            <button id="toggleLoanContent" class="secondary" style="width:auto; padding:8px 14px;">Hide</button>
+          </div>
+        </div>
+        <p class="muted">Track money pulled from another account to cover shortfalls. Each entry is an individual loan to pay back. Loans add to your balance on the loan date; repay any custom portion at any time (each payment deducts on its date and reduces the loan balance); cancel a payment to restore the balance.</p>
+        <div id="loanSectionContent">
         <div class="row">
           <div>
             <label for="loanName">Description</label>
@@ -421,6 +427,7 @@
           </thead>
           <tbody id="loanTable"></tbody>
         </table>
+        </div>
         </div>
       </section>
 
@@ -634,7 +641,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="auth.js?v=20260923a"></script>
-<script src="budget.js?v=20261105a"></script>
+<script src="budget.js?v=20261105b"></script>
 <script>
   /* Nav scroll state + mobile toggle + year + reveal animations */
   (function () {
