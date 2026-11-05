@@ -294,10 +294,15 @@ const getTransactionsForDay = (day) => {
   (state.loans || []).forEach((loan) => {
     if (!loan.inBalance && loan.date && d.getTime() === startOfDay(toDate(loan.date)).getTime())
       txns.push({ name: "\uD83D\uDCB0 " + loan.name + (loan.owed ? " (owed, not income)" : ""), amount: Number(loan.amount||0), type: "income", notIncome: loan.owed === true });
-    if (loan.repaid && loan.repaidDate && d.getTime() === startOfDay(toDate(loan.repaidDate)).getTime())
-      txns.push({ name: "\uD83D\uDCB0 Repay: " + loan.name, amount: Number(loan.amount||0), type: "expense" });
-    if (!loan.repaid && !loan.paused && loan.scheduledRepayDate && d.getTime() === startOfDay(toDate(loan.scheduledRepayDate)).getTime())
-      txns.push({ name: "\uD83D\uDCB0 Sched. Repay: " + loan.name, amount: Number(loan.amount||0), type: "expense" });
+    (loan.payments || []).forEach((p) => {
+      if (p.date && d.getTime() === startOfDay(toDate(p.date)).getTime())
+        txns.push({ name: "\uD83D\uDCB0 Repay: " + loan.name, amount: Number(p.amount||0), type: "expense" });
+    });
+    // Legacy whole-loan repayment (no itemized payments): remaining is the full amount
+    if (loan.repaid && loan.repaidDate && loanRemaining(loan) > 0 && d.getTime() === startOfDay(toDate(loan.repaidDate)).getTime())
+      txns.push({ name: "\uD83D\uDCB0 Repay: " + loan.name, amount: loanRemaining(loan), type: "expense" });
+    if (!loan.repaid && !loan.paused && loan.scheduledRepayDate && loanRemaining(loan) > 0 && d.getTime() === startOfDay(toDate(loan.scheduledRepayDate)).getTime())
+      txns.push({ name: "\uD83D\uDCB0 Sched. Repay: " + loan.name, amount: loanRemaining(loan), type: "expense" });
   });
   return txns;
 };
@@ -470,6 +475,19 @@ const renderDeposits = () => {
   });
 };
 
+/* ── Loan repayment helpers: partial payments are itemized in loan.payments ── */
+const loanPaid = (loan) => (loan.payments || []).reduce((a, p) => a + Number(p.amount || 0), 0);
+const loanRemaining = (loan) => Math.max(0, Math.round((Number(loan.amount || 0) - loanPaid(loan)) * 100) / 100);
+const loanBalanceAfter = (loan, pi) => Math.max(0, Math.round((Number(loan.amount || 0) - (loan.payments || []).slice(0, pi + 1).reduce((a, p) => a + Number(p.amount || 0), 0)) * 100) / 100);
+const fmtLoanDate = (iso) => iso ? new Date(iso+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "\u2014";
+const loanPaymentRowsHtml = (loan, i, cols) => (loan.payments || []).map((p, pi) => `<tr class="muted">
+      <td style="padding-left:28px">\u21B3 Payment</td>
+      <td>\u2212${formatMoney(Number(p.amount || 0))}</td>
+      <td>${fmtLoanDate(p.date)}</td>
+      <td colspan="${cols - 4}">Balance after: ${formatMoney(loanBalanceAfter(loan, pi))}</td>
+      <td><button class="secondary" data-action="cancel-loan-payment" data-index="${i}" data-pindex="${pi}" style="width:auto;display:inline-block">Cancel Payment</button></td>
+    </tr>`).join("");
+
 /* ── Render loans ── */
 const renderLoans = () => {
   elements.loanTable.innerHTML = "";
@@ -477,8 +495,9 @@ const renderLoans = () => {
   const todayD = startOfDay(new Date());
   (state.loans || []).forEach((loan, i) => {
     if (loan.repaid) { totalRepaid += Number(loan.amount || 0); return; }
-    if (loan.paused) totalPaused += Number(loan.amount || 0);
-    else totalOutstanding += Number(loan.amount || 0);
+    totalRepaid += loanPaid(loan);
+    if (loan.paused) totalPaused += loanRemaining(loan);
+    else totalOutstanding += loanRemaining(loan);
     activeRows++;
 
     const row = document.createElement("tr");
@@ -493,6 +512,8 @@ const renderLoans = () => {
     let statusHtml;
     if (loan.paused) {
       statusHtml = '<span class="pause-badge">Paused</span>';
+    } else if (loanPaid(loan) > 0 && !isOverdue && !isDueToday) {
+      statusHtml = `<span style="color:#2563eb;font-weight:600">Partial</span><div class="muted" style="font-size:11px">${formatMoney(loanRemaining(loan))} left</div>`;
     } else if (isOverdue) {
       statusHtml = '<span style="color:#dc2626;font-weight:600">Outstanding</span>';
     } else if (isDueToday) {
@@ -503,7 +524,9 @@ const renderLoans = () => {
       statusHtml = '<span style="color:#dc2626;font-weight:600">Outstanding</span>';
     }
 
-    let actionsHtml = `<button class="pay-today" data-action="repay-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">Mark Repaid</button>`;
+    let actionsHtml = `<input type="number" step="0.01" min="0.01" max="${loanRemaining(loan)}" placeholder="Amount" data-role="partial-amount" data-index="${i}" style="width:80px;margin-right:4px" />`;
+    actionsHtml += `<button data-action="partial-repay-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">Repay</button>`;
+    actionsHtml += `<button class="pay-today" data-action="repay-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">Pay Off (${formatMoney(loanRemaining(loan))})</button>`;
     actionsHtml += `<button class="${loan.paused ? 'secondary' : 'warn'}" data-action="toggle-pause-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">${loan.paused ? 'Resume' : 'Pause'}</button>`;
     actionsHtml += `<button class="secondary" data-action="toggle-owed-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">${loan.owed ? 'Mark as Income' : 'Mark as Owed'}</button>`;
     actionsHtml += `<button class="secondary" data-action="toggle-inbalance-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">${loan.inBalance ? 'Add To Balance' : 'Already In Balance'}</button>`;
@@ -514,12 +537,13 @@ const renderLoans = () => {
 
     row.innerHTML = `
       <td>${isDueToday && !loan.paused ? '<span class="today-arrow">▶</span>' : ''}${loan.name}${loan.owed ? '<span class="pause-badge" style="background:#7c3aed;color:#fff">Owed, not income</span>' : ''}${loan.inBalance ? '<span class="pause-badge" style="background:#dbeafe;color:#1d4ed8">In Balance</span>' : ''}</td>
-      <td><input type="number" step="0.01" data-action="edit-amount" data-index="${i}" value="${loan.amount}" style="width:90px" /></td>
+      <td><input type="number" step="0.01" data-action="edit-amount" data-index="${i}" value="${loan.amount}" style="width:90px" />${loanPaid(loan) > 0 ? `<div class="muted" style="font-size:11px">Paid ${formatMoney(loanPaid(loan))} &middot; Balance ${formatMoney(loanRemaining(loan))}</div>` : ''}</td>
       <td>${dd}</td>
       <td>${schedHtml}</td>
       <td>${statusHtml}</td>
       <td style="white-space:nowrap">${actionsHtml}</td>`;
     elements.loanTable.appendChild(row);
+    elements.loanTable.insertAdjacentHTML("beforeend", loanPaymentRowsHtml(loan, i, 6));
   });
 
   if (!activeRows) {
@@ -2214,12 +2238,35 @@ const handleLoanTableClick = (e) => {
   const loan = (state.loans || [])[idx];
   if (!loan) return;
 
-  if (action === "repay-loan") {
-    const now = new Date();
-    const repaidDate = `${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
-    loan.repaid = true;
-    loan.repaidDate = repaidDate;
+  const addLoanPayment = (amt) => {
+    if (!loan.payments) loan.payments = [];
+    loan.payments.push({ id: Date.now().toString(36), amount: amt, date: todayIso });
     loan.paused = false;
+    if (loanRemaining(loan) <= 0) { loan.repaid = true; loan.repaidDate = todayIso; }  // fully paid -> archive
+    renderLoans(); saveState(); calculateEndingBalance(); renderNegativeAlert();
+  };
+
+  if (action === "partial-repay-loan") {
+    const input = elements.loanTable.querySelector(`input[data-role="partial-amount"][data-index="${idx}"]`);
+    const amt = Math.round(Number(input && input.value || 0) * 100) / 100;
+    const remaining = loanRemaining(loan);
+    if (!(amt > 0)) { alert("Enter a repayment amount greater than 0."); return; }
+    if (amt > remaining) { alert(`That's more than the remaining balance (${formatMoney(remaining)}).`); return; }
+    addLoanPayment(amt);
+    return;
+  }
+
+  if (action === "repay-loan") {
+    const remaining = loanRemaining(loan);
+    if (remaining > 0) addLoanPayment(remaining);
+    return;
+  }
+
+  if (action === "cancel-loan-payment") {
+    const pi = Number(e.target.dataset.pindex);
+    if (!loan.payments || !loan.payments[pi]) return;
+    loan.payments.splice(pi, 1);   // balance is derived from payments, so this restores it
+    if (loan.repaid) { loan.repaid = false; loan.repaidDate = null; }  // un-archive
     renderLoans(); saveState(); calculateEndingBalance(); renderNegativeAlert();
     return;
   }
@@ -2272,6 +2319,7 @@ elements.loanTable.addEventListener("change", (e) => {
 
   if (action === "edit-amount") {
     loan.amount = Number(e.target.value || 0);
+    if ((loan.payments || []).length && loan.amount > 0 && loanRemaining(loan) <= 0) { loan.repaid = true; loan.repaidDate = loan.repaidDate || todayIso; }
     saveState(); calculateEndingBalance(); renderNegativeAlert(); renderLoans();
     return;
   }
@@ -2322,10 +2370,11 @@ const renderArchivedLoans = () => {
       <td>${dd}</td>
       <td>${rd}</td>
       <td style="white-space:nowrap">
-        <button class="secondary" data-action="unrepay-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">Undo Repay</button>
+        ${(loan.payments || []).length ? '' : `<button class="secondary" data-action="unrepay-loan" data-index="${i}" style="width:auto;display:inline-block;margin-right:4px">Undo Repay</button>`}
         <button class="danger" data-action="delete-loan" data-index="${i}" style="width:auto;display:inline-block">Delete</button>
       </td>
     </tr>`;
+    html += loanPaymentRowsHtml(loan, i, 5);
   });
   html += '</tbody></table></div>';
   archivedLoansContent.innerHTML = html;
