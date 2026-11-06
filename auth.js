@@ -157,37 +157,34 @@
 
     if (!options.force && cloudTs > 0 && cloudTs <= localTs) return false;
 
-    if (d.profiles) localStorage.setItem('budgetProfiles', d.profiles);
+    /* Tabs are only ever added via the + button (or restored from a backup file).
+       A sync must never invent or drop tabs, so:
+       - only adopt the cloud tab list when it is a non-empty list;
+       - if the cloud list is missing/empty, keep the local list as-is and
+         re-publish it, instead of rebuilding tabs from stray budget sub-docs. */
+    let cloudProfiles = [];
+    try { cloudProfiles = d.profiles ? JSON.parse(d.profiles) : []; } catch (_) {}
+    let localProfiles = [];
+    try { localProfiles = JSON.parse(localStorage.getItem('budgetProfiles') || '[]'); } catch (_) {}
+    if (!Array.isArray(cloudProfiles)) cloudProfiles = [];
+    if (!Array.isArray(localProfiles)) localProfiles = [];
+
+    let profiles;
+    if (cloudProfiles.length > 0) {
+      profiles = cloudProfiles;
+      localStorage.setItem('budgetProfiles', d.profiles);
+    } else {
+      profiles = localProfiles;
+      if (localProfiles.length > 0) {
+        userRef(uid).set({ profiles: JSON.stringify(localProfiles) }, { merge: true })
+          .catch(e => console.warn('[BudgetSync] Re-publishing tab list failed:', e));
+      }
+    }
     if (d.settings) {
       try {
         const s = JSON.parse(d.settings);
         Object.entries(s).forEach(([k, v]) => localStorage.setItem(k, v));
       } catch (_) {}
-    }
-
-    let profiles = [];
-    try { profiles = d.profiles ? JSON.parse(d.profiles) : []; } catch (_) {}
-
-    /* Recovery: if the profiles list is empty but budget sub-documents exist,
-       reconstruct profiles from them. This handles accidental profile-list wipes. */
-    if (profiles.length === 0) {
-      try {
-        const budgetsSnap = await userRef(uid).collection('budgets').get();
-        if (!budgetsSnap.empty) {
-          const recovered = [];
-          budgetsSnap.forEach((doc, i) => {
-            if (doc.data().data) {
-              recovered.push({ id: doc.id, name: `Budget ${recovered.length + 1}` });
-              localStorage.setItem(`budgetPlannerData.${doc.id}.v2`, doc.data().data);
-            }
-          });
-          if (recovered.length > 0) {
-            profiles = recovered;
-            localStorage.setItem('budgetProfiles', JSON.stringify(recovered));
-            toast('☁ Budget data recovered from cloud', 4000);
-          }
-        }
-      } catch (e) { console.warn('[BudgetSync] Sub-doc recovery failed:', e); }
     }
 
     /* Fetch budget data for all known profiles */
