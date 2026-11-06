@@ -1358,6 +1358,45 @@ const renderTabs = () => {
   addBtn.title = 'Add new budget tab';
   addBtn.addEventListener('click', addProfile);
   tabBar.appendChild(addBtn);
+  /* Clean-up button (only useful with more than one budget) */
+  if (profiles.length > 1) {
+    const cleanBtn = document.createElement('button');
+    cleanBtn.className = 'tab-add';
+    cleanBtn.textContent = '\uD83E\uDDF9';
+    cleanBtn.title = 'Delete empty budgets';
+    cleanBtn.style.fontSize = '14px';
+    cleanBtn.addEventListener('click', deleteEmptyProfiles);
+    tabBar.appendChild(cleanBtn);
+  }
+};
+
+const isProfileDataEmpty = (raw) => {
+  if (!raw) return true;
+  let d; try { d = JSON.parse(raw); } catch (_) { return false; }  // unreadable -> never treat as empty
+  const none = (a) => !a || (Array.isArray(a) ? a.length === 0 : Object.keys(a).length === 0);
+  return Number(d.startingBalance || 0) === 0 && none(d.bills) && none(d.deposits) &&
+    none(d.incidentals) && none(d.archivedIncidentals) && none(d.loans) && none(d.funds);
+};
+
+const deleteEmptyProfiles = () => {
+  if (activeProfile) saveState();
+  const keys = profiles.map(p => storageKeyForProfile(p.id));
+  chrome.storage.local.get(keys, (result) => {
+    let empty = profiles.filter(p => isProfileDataEmpty(result[storageKeyForProfile(p.id)]));
+    if (empty.length >= profiles.length) empty = empty.slice(1);  // always keep at least one budget
+    if (!empty.length) { alert('No empty budgets found.'); return; }
+    if (!confirm(`Delete these ${empty.length} empty budget(s)?\n\n` + empty.map(p => '\u2022 ' + p.name).join('\n') +
+      '\n\nBudgets with any bills, income, incidentals, loans, funds or a starting balance are kept.')) return;
+    const ids = new Set(empty.map(p => p.id));
+    profiles = profiles.filter(p => !ids.has(p.id));
+    empty.forEach(p => chrome.storage.local.remove(storageKeyForProfile(p.id)));
+    const activeGone = ids.has(activeProfile);
+    if (activeGone) activeProfile = profiles[0].id;
+    saveProfiles(() => {
+      renderTabs();
+      if (activeGone) refreshAll();
+    });
+  });
 };
 
 const startRenameTab = (profileId, btn) => {
