@@ -95,6 +95,28 @@
     });
   });
 
+  /* ── Unsynced-change tracking ──
+     A budget is "dirty" from the moment it is saved locally until its cloud write
+     is confirmed. Pulls never overwrite a dirty budget (that was deleting freshly
+     added items), and dirty budgets are flushed to the cloud on next sign-in. */
+  const dirtyKey = id => `budgetPlanner.dirty.${id}`;
+  const isDirty  = id => !!localStorage.getItem(dirtyKey(id));
+  const dirtySeq = {};
+
+  async function flushDirty(uid) {
+    let profiles = [];
+    try { profiles = JSON.parse(localStorage.getItem('budgetProfiles') || '[]'); } catch (_) {}
+    for (const p of profiles) {
+      if (!isDirty(p.id)) continue;
+      const data = localStorage.getItem(`budgetPlannerData.${p.id}.v2`);
+      if (!data) { localStorage.removeItem(dirtyKey(p.id)); continue; }
+      try {
+        await budgetRef(uid, p.id).set({ data, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        localStorage.removeItem(dirtyKey(p.id));
+      } catch (e) { console.warn('[BudgetSync] Flush failed for', p.id, e); }
+    }
+  }
+
   /* ── Prevent pulling our own writes ── */
   function markSaving() {
     saveCooldown = true;
@@ -190,7 +212,9 @@
     /* Fetch budget data for all known profiles */
     await Promise.all(profiles.map(async p => {
       try {
+        if (isDirty(p.id)) return;   // local copy has unsynced edits — keep it
         const bs = await budgetRef(uid, p.id).get();
+        if (isDirty(p.id)) return;   // edited while we were fetching
         if (bs.exists && bs.data().data) localStorage.setItem(`budgetPlannerData.${p.id}.v2`, bs.data().data);
       } catch (_) {}
     }));
@@ -301,6 +325,8 @@
        doesn't lose this flag and re-trigger reconcile on the next load. */
     localStorage.setItem(SYNCED_USER_KEY, user.uid);
 
+    await flushDirty(user.uid);   // push any edits that never reached the cloud before pulling
+
     if (!knownUser) {
       await reconcile(user);
     } else if (!pulledThisTab) {
@@ -318,8 +344,12 @@
      Guards: never push null/empty data — budget sub-docs hold real user data. */
   window.cloudSync = {
     saveProfile(profileId, dataStr) {
+      /* Edited before auth finished loading: remember it so a startup pull can't clobber it */
+      if (!currentUser && profileId && dataStr && localStorage.getItem(SYNCED_USER_KEY)) localStorage.setItem(dirtyKey(profileId), String(Date.now()));
       if (!currentUser || !profileId || !dataStr) return;
       markSaving();
+      const seq = dirtySeq[profileId] = (dirtySeq[profileId] || 0) + 1;
+      localStorage.setItem(dirtyKey(profileId), String(Date.now()));
       const batch = db.batch();
       batch.set(budgetRef(currentUser.uid, profileId), {
         data:      dataStr,
@@ -330,8 +360,9 @@
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       batch.commit()
+        .then(() => { if (dirtySeq[profileId] === seq) localStorage.removeItem(dirtyKey(profileId)); })
         .then(syncLocalTsAfterWrite)
-        .catch(e => console.warn('[BudgetSync] saveProfile failed:', e));
+        .catch(e => console.warn('[BudgetSync] saveProfile failed (kept as unsynced):', e));
     },
 
     saveProfiles(profiles) {
