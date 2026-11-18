@@ -1923,9 +1923,17 @@ const handleBillEdit = (e) => {
   if (!f) return;
   updateBillField(idx, f, e.target.value);
   clearTimeout(_editDebounce);
-  _editDebounce = setTimeout(() => { saveState(); }, 500);
+  _editDebounce = setTimeout(() => { _editDebounce = null; saveState(); }, 500);
   calculateEndingBalance(); renderNegativeAlert();
 };
+/* Don't lose a pending debounced edit if the page is hidden/closed within the 500ms window (common on mobile) */
+const flushPendingBillSave = () => {
+  if (_editDebounce === null) return;
+  clearTimeout(_editDebounce); _editDebounce = null;
+  saveState();
+};
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushPendingBillSave(); });
+window.addEventListener("pagehide", flushPendingBillSave);
 elements.billTable.addEventListener("input", handleBillEdit);
 elements.billTable.addEventListener("change", handleBillEdit);
 

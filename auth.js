@@ -261,6 +261,23 @@
     unsubSnapshot = () => handlers.forEach(unsub => unsub());
   }
 
+  /* ── Re-check the cloud when the app comes back to the foreground ──
+     A phone keeps the page alive in the background: the once-per-tab pull and the
+     realtime listener never re-run, so it kept showing stale amounts. Pull (non-forced:
+     it only reloads if the cloud is newer, and never touches unsynced local edits). */
+  let lastResumePull = 0;
+  async function pullOnResume() {
+    if (!currentUser || document.visibilityState === 'hidden') return;
+    const now = Date.now();
+    if (now - lastResumePull < 15000) return;
+    lastResumePull = now;
+    await flushDirty(currentUser.uid);
+    pullFromCloud(currentUser.uid, { silent: true });
+  }
+  document.addEventListener('visibilitychange', pullOnResume);
+  window.addEventListener('pageshow', pullOnResume);
+  window.addEventListener('online', pullOnResume);
+
   /* ── First-time sign-in reconciliation ──
      SAFE RULE: cloud is always the source of truth.
      - Cloud exists → always pull from it, no dialog, no overwrite risk.
