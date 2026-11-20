@@ -1896,11 +1896,20 @@ const runDebtPlannerSync = (silent = false) => {
   return true;
 };
 
-document.getElementById('syncDebtPlanner').addEventListener('click', () => runDebtPlannerSync(false));
+document.getElementById('syncDebtPlanner').addEventListener('click', () => {
+  const n = typeof autoRecordDebtPayments === 'function' ? autoRecordDebtPayments() : 0;
+  runDebtPlannerSync(false);
+  if (n > 0) setTimeout(() => showToast(`Recorded ${n} debt payment${n > 1 ? 's' : ''} to Debt Planner`), 100);
+});
 
 // Auto-sync on page load if bills are already linked to debt planner
 setTimeout(() => {
-  if (state.bills.some(b => b.debtId)) runDebtPlannerSync(true);
+  if (state.bills.some(b => b.debtId)) {
+    // Record this month's passed-due payments first, so balances (and focus debt) are current before syncing
+    const n = autoRecordDebtPayments();
+    runDebtPlannerSync(true);
+    if (n > 0) showToast(`Recorded ${n} debt payment${n > 1 ? 's' : ''} to Debt Planner`);
+  }
 }, 500);
 
 /* ── Events: export ── */
@@ -1938,22 +1947,28 @@ elements.billTable.addEventListener("input", handleBillEdit);
 elements.billTable.addEventListener("change", handleBillEdit);
 
 /* ── Debt Planner payment bridge ── */
-const recordPaymentToDebtPlanner = (debtId, amount, date) => {
+const DEBT_DIRTY_KEY = 'debtPlanner.dirtyFromBudget';
+
+const recordPaymentToDebtPlanner = (debtId, amount, date, note = 'Budget Planner') => {
   try {
     const raw = localStorage.getItem('debtPlannerData');
-    if (!raw) return;
+    if (!raw) return false;
     const data = JSON.parse(raw);
     const idx = (data.debts || []).findIndex(d => d.id === debtId);
-    if (idx < 0) return;
+    if (idx < 0) return false;
     const debt = data.debts[idx];
-    const newBalance = Math.max(0, Math.round((debt.balance - amount) * 100) / 100);
+    const applied = Math.min(amount, debt.balance);   // never push balance below zero
+    if (applied <= 0) return false;
+    const newBalance = Math.max(0, Math.round((debt.balance - applied) * 100) / 100);
     data.debts[idx] = {
       ...debt,
       balance: newBalance,
-      payments: [...(debt.payments || []), { date, amount, note: 'Budget Planner' }]
+      payments: [...(debt.payments || []), { date, amount: applied, note }]
     };
     localStorage.setItem('debtPlannerData', JSON.stringify(data));
-  } catch(e) { console.warn('[DebtSync] recordPayment failed:', e); }
+    localStorage.setItem(DEBT_DIRTY_KEY, '1');
+    return true;
+  } catch(e) { console.warn('[DebtSync] recordPayment failed:', e); return false; }
 };
 
 const undoPaymentFromDebtPlanner = (debtId, date) => {
@@ -1965,13 +1980,49 @@ const undoPaymentFromDebtPlanner = (debtId, date) => {
     if (idx < 0) return;
     const debt = data.debts[idx];
     const payments = debt.payments || [];
-    const pmtIdx = payments.findLastIndex(p => p.date === date && p.note === 'Budget Planner');
+    const pmtIdx = payments.findLastIndex(p => p.date === date && /^Budget Planner/.test(p.note || ''));
     if (pmtIdx < 0) return;
     const restored = Math.round((debt.balance + payments[pmtIdx].amount) * 100) / 100;
     const newPayments = payments.filter((_, i) => i !== pmtIdx);
     data.debts[idx] = { ...debt, balance: restored, payments: newPayments };
     localStorage.setItem('debtPlannerData', JSON.stringify(data));
+    localStorage.setItem(DEBT_DIRTY_KEY, '1');
   } catch(e) { console.warn('[DebtSync] undoPayment failed:', e); }
+};
+
+/* ── Auto-record: once a linked bill's due date has passed this month, post it to the Debt Planner ──
+   Skips when the debt already has any payment dated this month (e.g. "Pay Today" or a manual entry),
+   and when the user undid this month's payment (bill.noAutoPay). */
+const autoRecordDebtPayments = () => {
+  try {
+    const raw = localStorage.getItem('debtPlannerData');
+    if (!raw) return 0;
+    const data = JSON.parse(raw);
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+    const mk = currentMonthKey();
+    let recorded = 0;
+    state.bills.forEach(bill => {
+      if (!bill.debtId || bill.interval !== 'monthly') return;
+      if (bill.paused || bill.notInBalance === mk || bill.noAutoPay === mk) return;
+      if (!hasBillPaidThisMonth(bill)) return;
+      const debt = (data.debts || []).find(d => d.id === bill.debtId);
+      if (!debt || debt.balance <= 0.005) return;
+      const hasThisMonth = (debt.payments || []).some(p => p.date && p.date.startsWith(mk));
+      if (hasThisMonth) return;
+      const amount = Number(bill.amount || 0);
+      if (amount <= 0) return;
+      const dueDay = Math.min(getDueDay(bill), new Date(y, m + 1, 0).getDate());
+      const payDate = `${y}-${pad2(m + 1)}-${pad2(dueDay)}`;
+      if (recordPaymentToDebtPlanner(bill.debtId, amount, payDate, 'Budget Planner (auto)')) {
+        recorded++;
+        // keep Debt Planner data fresh for the next bill in this loop
+        const fresh = JSON.parse(localStorage.getItem('debtPlannerData'));
+        data.debts = fresh.debts;
+      }
+    });
+    return recorded;
+  } catch (e) { console.warn('[DebtSync] auto-record failed:', e); return 0; }
 };
 
 /* ── Events: undo pay today ── */
@@ -1997,6 +2048,8 @@ elements.billTable.addEventListener("click", (e) => {
   if (!stillHasThisMonth) bill.paused = false;
   renderBills(); renderPausedBills(); saveState(); calculateEndingBalance(); renderNegativeAlert();
   if (bill.debtId) {
+    bill.noAutoPay = currentMonthKey();
+    saveState();
     undoPaymentFromDebtPlanner(bill.debtId, removedDate);
     runDebtPlannerSync(true);
   }
