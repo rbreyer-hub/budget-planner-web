@@ -1846,7 +1846,7 @@ const runDebtPlannerSync = async (silent = false) => {
   const strategyExcluded = debtData.strategyExcluded || [];
 
   // Determine focus debt (month-1 snowball/avalanche target)
-  const activeDebts = debts.filter(d => !strategyExcluded.includes(d.id) && d.balance > 0.005);
+  const activeDebts = debts.filter(d => d.type !== 'personal_loan' && !strategyExcluded.includes(d.id) && d.balance > 0.005);   // personal loans are repaid on their own schedule
   if (strategy === 'snowball') activeDebts.sort((a, b) => a.balance - b.balance);
   else activeDebts.sort((a, b) => b.apr - a.apr);
   const focusDebtId = activeDebts[0]?.id || null;
@@ -1857,7 +1857,8 @@ const runDebtPlannerSync = async (silent = false) => {
   }
 
   normalizeBills();
-  const before = JSON.stringify(state.bills);
+  if (!state.deposits) state.deposits = [];
+  const before = JSON.stringify([state.bills, state.deposits]);
 
   let added = 0, updated = 0;
   debts.forEach(debt => {
@@ -1874,7 +1875,8 @@ const runDebtPlannerSync = async (silent = false) => {
         ...existing,
         name: displayName,
         amount: newAmount,
-        ...(debt.dueDay > 0 ? { dueDay: debt.dueDay } : {})
+        ...(debt.dueDay > 0 ? { dueDay: debt.dueDay } : {}),
+        ...(debt.firstPaymentDate ? { startDate: debt.firstPaymentDate } : {})   // nothing is charged before the first payment
       };
       if (JSON.stringify(next) !== JSON.stringify(existing)) { state.bills[existingIdx] = next; updated++; }
     } else {
@@ -1883,7 +1885,7 @@ const runDebtPlannerSync = async (silent = false) => {
         amount: newAmount,
         interval: 'monthly',
         dueDay: debt.dueDay > 0 ? debt.dueDay : null,
-        startDate: state.balanceDate,
+        startDate: debt.firstPaymentDate || state.balanceDate,
         type: 'expense',
         debtId: debt.id,
         manualPayments: []
@@ -1902,13 +1904,29 @@ const runDebtPlannerSync = async (silent = false) => {
     removed = prevLen - state.bills.length;
   }
 
+  /* Loan proceeds: a personal loan flagged "add to balance" in the Debt Planner is one income deposit here,
+     kept in step with the loan. Unchecking it removes the deposit. A deleted loan keeps its deposit
+     (the money was still received). */
+  debts.forEach(debt => {
+    const p = debt.proceeds;
+    const di = state.deposits.findIndex(d => d.fromDebt && d.fromDebt.id === debt.id);
+    if (p && p.include && Number(p.amount) > 0 && p.date) {
+      const dep = { name: `Loan proceeds: ${debt.name}`, amount: Math.round(Number(p.amount) * 100) / 100, date: p.date, fromDebt: { id: debt.id } };
+      if (di < 0) state.deposits.push(dep);
+      else if (JSON.stringify(state.deposits[di]) !== JSON.stringify(dep)) state.deposits[di] = dep;
+    } else if (di >= 0) {
+      state.deposits.splice(di, 1);
+    }
+  });
+
   normalizeBills();
-  if (JSON.stringify(state.bills) === before) {   // nothing changed: don't re-save (and re-publish) the budget
+  if (JSON.stringify([state.bills, state.deposits]) === before) {   // nothing changed: don't re-save (and re-publish) the budget
     if (!silent) showToast('Debt Planner already in sync');
     return true;
   }
   renderBills();
   renderPausedBills();
+  renderDeposits();
   saveState();
   calculateEndingBalance();
   renderNegativeAlert();
@@ -1924,14 +1942,21 @@ document.getElementById('syncDebtPlanner').addEventListener('click', async () =>
 });
 
 // Auto-sync on page load if bills are already linked to debt planner
-setTimeout(async () => {
-  if (state.bills.some(b => b.debtId)) {
-    // Record this month's passed-due payments first, so balances (and focus debt) are current before syncing
-    const n = await autoRecordDebtPayments();
-    await runDebtPlannerSync(true);
-    if (n > 0) showToast(`Recorded ${n} debt payment${n > 1 ? 's' : ''} to Debt Planner`);
-  }
-}, 500);
+const autoDebtSync = async () => {
+  if (!state.bills.some(b => b.debtId)) return;
+  // Record this month's passed-due payments first, so balances (and focus debt) are current before syncing
+  const n = await autoRecordDebtPayments();
+  await runDebtPlannerSync(true);
+  if (n > 0) showToast(`Recorded ${n} debt payment${n > 1 ? 's' : ''} to Debt Planner`);
+};
+setTimeout(autoDebtSync, 500);
+/* Coming back to the app (e.g. after adding a loan in the Debt Planner) refreshes the debt-linked bills and loan income */
+let lastDebtResume = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || Date.now() - lastDebtResume < 30000) return;
+  lastDebtResume = Date.now();
+  autoDebtSync();
+});
 
 /* ── Events: export ── */
 elements.exportBills.addEventListener("click", () => {
@@ -2047,6 +2072,7 @@ const autoRecordDebtPayments = async () => {
       if (amount <= 0) return;
       const dueDay = Math.min(getDueDay(bill), new Date(y, m + 1, 0).getDate());
       const payDate = `${y}-${pad2(m + 1)}-${pad2(dueDay)}`;
+      if (bill.startDate && payDate < bill.startDate) return;   // first payment hasn't happened yet
       if (applyDebtPayment(data, bill.debtId, amount, payDate, 'Budget Planner (auto)')) recorded++;
     });
     return recorded > 0;
@@ -2306,6 +2332,20 @@ elements.depositTable.addEventListener("click", (e) => {
   if (action !== "remove-deposit" && action !== "cancel-deposit") return;
   const idx = Number(e.target.dataset.index), dep = state.deposits[idx];
   if (!dep) return;
+
+  /* A deposit created from a Debt Planner loan: removing it also un-checks "add to balance" on the loan,
+     otherwise the next sync would just recreate it. */
+  if (dep.fromDebt) {
+    if (!confirm(`${formatMoney(Number(dep.amount||0))} was added to your balance from a loan in the Debt Planner.\n\n` +
+                 `OK = remove it and stop adding this loan to your balance\nCancel = keep it`)) return;
+    const debtId = dep.fromDebt.id;
+    editDebtPlannerData(d => {
+      const debt = (d.debts || []).find(x => x.id === debtId);
+      if (!debt || !debt.proceeds || !debt.proceeds.include) return false;
+      debt.proceeds = { ...debt.proceeds, include: false };
+      return true;
+    });
+  }
 
   /* If this deposit came from a fund transfer, offer to return the money */
   if (dep.fromFund) {
