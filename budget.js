@@ -1816,15 +1816,27 @@ elements.resetBills.addEventListener("click", () => {
 });
 
 /* ── Sync with Debt Planner ── */
-const runDebtPlannerSync = (silent = false) => {
+const readLocalDebtData = () => {
   const raw = localStorage.getItem('debtPlannerData');
-  if (!raw) {
-    if (!silent) alert('No Debt Planner data found. Open the Debt Planner in this browser first, then try again.');
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch (_) { return null; }
+};
+
+/* Keeps debt-linked bills in step with the Debt Planner.
+   Signed in, the CLOUD copy of the Debt Planner data is used so every device computes the same bills
+   (this browser's own copy can be stale, which made two devices rewrite each other's bills and show
+   different balances). If the cloud can't be read, nothing is changed. The budget is only saved when
+   a bill actually changes. The automatic (silent) run never removes bills unless the data is the cloud copy. */
+const runDebtPlannerSync = async (silent = false) => {
+  const src = window.cloudSync?.getDebtPlannerData ? await window.cloudSync.getDebtPlannerData() : { source: 'local' };
+  if (window.__budgetReloading) return false;   // a cloud pull is about to reload the page
+  if (src.source === 'error') {
+    if (!silent) alert('Could not reach the cloud to read your Debt Planner data. Try again when you are online.');
     return false;
   }
-  let debtData;
-  try { debtData = JSON.parse(raw); } catch(_) {
-    if (!silent) alert('Could not read Debt Planner data.');
+  const debtData = src.source === 'cloud' ? src.data : readLocalDebtData();
+  if (!debtData) {
+    if (!silent) alert('No Debt Planner data found. Open the Debt Planner first, then try again.');
     return false;
   }
 
@@ -1839,15 +1851,16 @@ const runDebtPlannerSync = (silent = false) => {
   else activeDebts.sort((a, b) => b.apr - a.apr);
   const focusDebtId = activeDebts[0]?.id || null;
 
-  const qualifying = debts;
-
-  if (qualifying.length === 0) {
+  if (debts.length === 0) {
     if (!silent) alert('No debts found in Debt Planner.');
     return false;
   }
 
+  normalizeBills();
+  const before = JSON.stringify(state.bills);
+
   let added = 0, updated = 0;
-  qualifying.forEach(debt => {
+  debts.forEach(debt => {
     const existingIdx = state.bills.findIndex(b => b.debtId === debt.id);
     const isFocus = debt.id === focusDebtId && extraPayment > 0;
     const baseMin = debt.minPayment || 0;
@@ -1857,13 +1870,13 @@ const runDebtPlannerSync = (silent = false) => {
       : debt.name;
     if (existingIdx >= 0) {
       const existing = state.bills[existingIdx];
-      state.bills[existingIdx] = {
+      const next = {
         ...existing,
         name: displayName,
         amount: newAmount,
         ...(debt.dueDay > 0 ? { dueDay: debt.dueDay } : {})
       };
-      updated++;
+      if (JSON.stringify(next) !== JSON.stringify(existing)) { state.bills[existingIdx] = next; updated++; }
     } else {
       state.bills.push({
         name: displayName,
@@ -1879,13 +1892,21 @@ const runDebtPlannerSync = (silent = false) => {
     }
   });
 
-  // Remove linked bills whose debt no longer exists in the Debt Planner
-  const allDebtIds = new Set(debts.map(d => d.id));
-  const prevLen = state.bills.length;
-  state.bills = state.bills.filter(b => !b.debtId || allDebtIds.has(b.debtId));
-  const removed = prevLen - state.bills.length;
+  // Remove linked bills whose debt no longer exists. Manual sync, or the authoritative cloud copy only:
+  // a silent run on a local copy must not delete bills.
+  let removed = 0;
+  if (!silent || src.source === 'cloud') {
+    const allDebtIds = new Set(debts.map(d => d.id));
+    const prevLen = state.bills.length;
+    state.bills = state.bills.filter(b => !b.debtId || allDebtIds.has(b.debtId));
+    removed = prevLen - state.bills.length;
+  }
 
   normalizeBills();
+  if (JSON.stringify(state.bills) === before) {   // nothing changed: don't re-save (and re-publish) the budget
+    if (!silent) showToast('Debt Planner already in sync');
+    return true;
+  }
   renderBills();
   renderPausedBills();
   saveState();
@@ -1896,18 +1917,18 @@ const runDebtPlannerSync = (silent = false) => {
   return true;
 };
 
-document.getElementById('syncDebtPlanner').addEventListener('click', () => {
-  const n = typeof autoRecordDebtPayments === 'function' ? autoRecordDebtPayments() : 0;
-  runDebtPlannerSync(false);
+document.getElementById('syncDebtPlanner').addEventListener('click', async () => {
+  const n = await autoRecordDebtPayments();
+  await runDebtPlannerSync(false);
   if (n > 0) setTimeout(() => showToast(`Recorded ${n} debt payment${n > 1 ? 's' : ''} to Debt Planner`), 100);
 });
 
 // Auto-sync on page load if bills are already linked to debt planner
-setTimeout(() => {
+setTimeout(async () => {
   if (state.bills.some(b => b.debtId)) {
     // Record this month's passed-due payments first, so balances (and focus debt) are current before syncing
-    const n = autoRecordDebtPayments();
-    runDebtPlannerSync(true);
+    const n = await autoRecordDebtPayments();
+    await runDebtPlannerSync(true);
     if (n > 0) showToast(`Recorded ${n} debt payment${n > 1 ? 's' : ''} to Debt Planner`);
   }
 }, 500);
@@ -1949,80 +1970,88 @@ elements.billTable.addEventListener("change", handleBillEdit);
 /* ── Debt Planner payment bridge ── */
 const DEBT_DIRTY_KEY = 'debtPlanner.dirtyFromBudget';
 
-const recordPaymentToDebtPlanner = (debtId, amount, date, note = 'Budget Planner') => {
+const applyDebtPayment = (data, debtId, amount, date, note = 'Budget Planner') => {
+  const idx = (data.debts || []).findIndex(d => d.id === debtId);
+  if (idx < 0) return false;
+  const debt = data.debts[idx];
+  const applied = Math.min(amount, debt.balance);   // never push balance below zero
+  if (applied <= 0) return false;
+  const newBalance = Math.max(0, Math.round((debt.balance - applied) * 100) / 100);
+  data.debts[idx] = {
+    ...debt,
+    balance: newBalance,
+    payments: [...(debt.payments || []), { date, amount: applied, note }]
+  };
+  return true;
+};
+
+const removeDebtPayment = (data, debtId, date) => {
+  const idx = (data.debts || []).findIndex(d => d.id === debtId);
+  if (idx < 0) return false;
+  const debt = data.debts[idx];
+  const payments = debt.payments || [];
+  const pmtIdx = payments.findLastIndex(p => p.date === date && /^Budget Planner/.test(p.note || ''));
+  if (pmtIdx < 0) return false;
+  const restored = Math.round((debt.balance + payments[pmtIdx].amount) * 100) / 100;
+  data.debts[idx] = { ...debt, balance: restored, payments: payments.filter((_, i) => i !== pmtIdx) };
+  return true;
+};
+
+/* Edit the Debt Planner data: the cloud copy when signed in (so every device agrees and the bill sync reads
+   the same numbers), otherwise this browser's copy. Resolves true if something changed. */
+const editDebtPlannerData = async (mutator) => {
+  await window.cloudSync?.ready?.();   // signed-in state is only known once auth has settled
+  if (window.__budgetReloading) return false;
+  if (window.cloudSync?.isSignedIn?.()) {
+    const r = await window.cloudSync.updateDebtPlanner(mutator);
+    if (r.ok) { try { localStorage.setItem('debtPlannerData', r.raw); } catch (_) {} return true; }
+    if (r.unchanged) return false;
+    // no cloud copy yet, or the cloud is unreachable: fall back to this browser's copy
+  }
   try {
     const raw = localStorage.getItem('debtPlannerData');
     if (!raw) return false;
     const data = JSON.parse(raw);
-    const idx = (data.debts || []).findIndex(d => d.id === debtId);
-    if (idx < 0) return false;
-    const debt = data.debts[idx];
-    const applied = Math.min(amount, debt.balance);   // never push balance below zero
-    if (applied <= 0) return false;
-    const newBalance = Math.max(0, Math.round((debt.balance - applied) * 100) / 100);
-    data.debts[idx] = {
-      ...debt,
-      balance: newBalance,
-      payments: [...(debt.payments || []), { date, amount: applied, note }]
-    };
+    if (!mutator(data)) return false;
     localStorage.setItem('debtPlannerData', JSON.stringify(data));
-    localStorage.setItem(DEBT_DIRTY_KEY, '1');
+    localStorage.setItem(DEBT_DIRTY_KEY, '1');   // offline/signed-out edit: the Debt Planner pushes it to the cloud when it next opens
     return true;
-  } catch(e) { console.warn('[DebtSync] recordPayment failed:', e); return false; }
+  } catch (e) { console.warn('[DebtSync] edit failed:', e); return false; }
 };
 
-const undoPaymentFromDebtPlanner = (debtId, date) => {
-  try {
-    const raw = localStorage.getItem('debtPlannerData');
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    const idx = (data.debts || []).findIndex(d => d.id === debtId);
-    if (idx < 0) return;
-    const debt = data.debts[idx];
-    const payments = debt.payments || [];
-    const pmtIdx = payments.findLastIndex(p => p.date === date && /^Budget Planner/.test(p.note || ''));
-    if (pmtIdx < 0) return;
-    const restored = Math.round((debt.balance + payments[pmtIdx].amount) * 100) / 100;
-    const newPayments = payments.filter((_, i) => i !== pmtIdx);
-    data.debts[idx] = { ...debt, balance: restored, payments: newPayments };
-    localStorage.setItem('debtPlannerData', JSON.stringify(data));
-    localStorage.setItem(DEBT_DIRTY_KEY, '1');
-  } catch(e) { console.warn('[DebtSync] undoPayment failed:', e); }
-};
+const recordPaymentToDebtPlanner = (debtId, amount, date, note = 'Budget Planner') =>
+  editDebtPlannerData(d => applyDebtPayment(d, debtId, amount, date, note));
+const undoPaymentFromDebtPlanner = (debtId, date) =>
+  editDebtPlannerData(d => removeDebtPayment(d, debtId, date));
 
 /* ── Auto-record: once a linked bill's due date has passed this month, post it to the Debt Planner ──
    Skips when the debt already has any payment dated this month (e.g. "Pay Today" or a manual entry),
-   and when the user undid this month's payment (bill.noAutoPay). */
-const autoRecordDebtPayments = () => {
-  try {
-    const raw = localStorage.getItem('debtPlannerData');
-    if (!raw) return 0;
-    const data = JSON.parse(raw);
-    const now = new Date();
-    const y = now.getFullYear(), m = now.getMonth();
-    const mk = currentMonthKey();
-    let recorded = 0;
-    state.bills.forEach(bill => {
+   and when the user undid this month's payment (bill.noAutoPay). Runs against the cloud copy inside one
+   transaction, so two devices can't both record the same month's payment. Resolves the number recorded. */
+const autoRecordDebtPayments = async () => {
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const mk = currentMonthKey();
+  const bills = state.bills.slice();
+  let recorded = 0;
+  await editDebtPlannerData((data) => {
+    recorded = 0;   // the mutator can run more than once (transaction retry)
+    bills.forEach(bill => {
       if (!bill.debtId || bill.interval !== 'monthly') return;
       if (bill.paused || bill.notInBalance === mk || bill.noAutoPay === mk) return;
       if (!hasBillPaidThisMonth(bill)) return;
       const debt = (data.debts || []).find(d => d.id === bill.debtId);
       if (!debt || debt.balance <= 0.005) return;
-      const hasThisMonth = (debt.payments || []).some(p => p.date && p.date.startsWith(mk));
-      if (hasThisMonth) return;
+      if ((debt.payments || []).some(p => p.date && p.date.startsWith(mk))) return;
       const amount = Number(bill.amount || 0);
       if (amount <= 0) return;
       const dueDay = Math.min(getDueDay(bill), new Date(y, m + 1, 0).getDate());
       const payDate = `${y}-${pad2(m + 1)}-${pad2(dueDay)}`;
-      if (recordPaymentToDebtPlanner(bill.debtId, amount, payDate, 'Budget Planner (auto)')) {
-        recorded++;
-        // keep Debt Planner data fresh for the next bill in this loop
-        const fresh = JSON.parse(localStorage.getItem('debtPlannerData'));
-        data.debts = fresh.debts;
-      }
+      if (applyDebtPayment(data, bill.debtId, amount, payDate, 'Budget Planner (auto)')) recorded++;
     });
-    return recorded;
-  } catch (e) { console.warn('[DebtSync] auto-record failed:', e); return 0; }
+    return recorded > 0;
+  });
+  return recorded;
 };
 
 /* ── Events: undo pay today ── */
@@ -2050,8 +2079,7 @@ elements.billTable.addEventListener("click", (e) => {
   if (bill.debtId) {
     bill.noAutoPay = currentMonthKey();
     saveState();
-    undoPaymentFromDebtPlanner(bill.debtId, removedDate);
-    runDebtPlannerSync(true);
+    undoPaymentFromDebtPlanner(bill.debtId, removedDate).then(() => runDebtPlannerSync(true));
   }
 });
 
@@ -2094,8 +2122,7 @@ elements.billTable.addEventListener("click", (e) => {
   bill.manualPayments.push({ date: payDate, amount: paidAmount });
   renderBills(); renderPausedBills(); saveState(); calculateEndingBalance(); renderNegativeAlert(); renderMonthlyExpenseSummary();
   if (bill.debtId) {
-    recordPaymentToDebtPlanner(bill.debtId, paidAmount, payDate);
-    runDebtPlannerSync(true);
+    recordPaymentToDebtPlanner(bill.debtId, paidAmount, payDate).then(() => runDebtPlannerSync(true));
   }
 });
 

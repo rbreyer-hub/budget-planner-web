@@ -24,6 +24,12 @@
 
   const userRef   = (uid) => db.collection('users').doc(uid);
   const budgetRef = (uid, pid) => userRef(uid).collection('budgets').doc(pid);
+  /* The Debt Planner app keeps its data here (field `data` = JSON string). */
+  const debtRef   = (uid) => userRef(uid).collection('debtPlanner').doc('main');
+
+  /* Resolves once the first auth state (and the sign-in sync that follows it) has settled. */
+  let authReadyResolve;
+  const authReady = new Promise(r => { authReadyResolve = r; });
 
   /* ── Toast ── */
   function toast(msg, duration = 2500) {
@@ -221,6 +227,7 @@
 
     if (cloudTs > 0) localStorage.setItem(LAST_PULL_TS_KEY, String(cloudTs));
     sessionStorage.setItem(SESSION_KEY, uid);
+    window.__budgetReloading = true;   // lets in-flight work (e.g. the Debt Planner sync) bail out
     location.reload();
     return true;
   }
@@ -326,7 +333,9 @@
   }
 
   /* ── Auth state listener ── */
-  auth.onAuthStateChanged(async user => {
+  auth.onAuthStateChanged(user => handleAuth(user).finally(() => authReadyResolve()));
+
+  async function handleAuth(user) {
     currentUser = user;
     updateAuthUI(user);
 
@@ -355,7 +364,7 @@
 
     /* Daily backup runs after sync so we push the freshest local data */
     runDailyBackupIfDue(user.uid);
-  });
+  }
 
   /* ── Public API called from budget.js on every save ──
      Guards: never push null/empty data — budget sub-docs hold real user data. */
@@ -392,6 +401,52 @@
         }, { merge: true })
         .then(syncLocalTsAfterWrite)
         .catch(e => console.warn('[BudgetSync] saveProfiles failed:', e));
+    },
+
+    isSignedIn() { return !!currentUser; },
+    /* Resolves once auth has settled (or after 8s), so callers can trust isSignedIn(). */
+    ready() { return Promise.race([authReady, new Promise(r => setTimeout(r, 8000))]); },
+
+    /* Debt Planner data for the Budget's debt sync. Signed in -> the CLOUD copy, so every device
+       computes the same bill amounts (a device's own localStorage copy can be stale).
+       Returns { source: 'cloud', raw, data } | { source: 'local' } (signed out / no cloud copy yet)
+       | { source: 'error' } (signed in but the cloud could not be read: caller must not guess). */
+    async getDebtPlannerData() {
+      await Promise.race([authReady, new Promise(r => setTimeout(r, 8000))]);
+      if (!currentUser) return { source: 'local' };
+      try {
+        const snap = await debtRef(currentUser.uid).get();
+        const raw = snap.exists ? snap.data()?.data : null;
+        if (!raw) return { source: 'local' };
+        return { source: 'cloud', raw, data: JSON.parse(raw) };
+      } catch (e) {
+        console.warn('[BudgetSync] Could not read Debt Planner data from cloud:', e);
+        return { source: 'error' };
+      }
+    },
+
+    /* Atomically edit the cloud copy of the Debt Planner data. mutator(data) edits in place and
+       returns true if it changed anything. Resolves { ok, raw } | { unchanged } | { noDoc } | { error }. */
+    async updateDebtPlanner(mutator) {
+      await Promise.race([authReady, new Promise(r => setTimeout(r, 8000))]);
+      if (!currentUser) return { ok: false };
+      const ref = debtRef(currentUser.uid);
+      try {
+        const res = await db.runTransaction(async tx => {
+          const snap = await tx.get(ref);
+          const cur = snap.exists ? snap.data()?.data : null;
+          if (!cur) return { noDoc: true };
+          const data = JSON.parse(cur);
+          if (!mutator(data)) return { unchanged: true };
+          const out = JSON.stringify(data);
+          tx.set(ref, { data: out, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+          return { ok: true, raw: out };
+        });
+        return res;
+      } catch (e) {
+        console.warn('[BudgetSync] Debt Planner cloud update failed:', e);
+        return { ok: false, error: true };
+      }
     },
 
     async saveSetting(key, value) {
