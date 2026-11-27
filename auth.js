@@ -109,6 +109,74 @@
   const isDirty  = id => !!localStorage.getItem(dirtyKey(id));
   const dirtySeq = {};
 
+  /* ── Conflict-safe budget writes ──
+     base.<id> is the budget JSON this device last agreed on with the cloud (pulled or written).
+     Every write reads the cloud copy inside a transaction first. If it no longer matches base,
+     another device saved in between, so the two sets of edits are merged field by field against
+     base, instead of this device's whole (stale) copy replacing them. That replacement is what
+     kept reverting bill amounts edited on another device. */
+  const baseKey = id => `budgetPlanner.base.${id}`;
+  const dataKey = id => `budgetPlannerData.${id}.v2`;
+  const same  = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  function merge3(b, l, c) {
+    if (same(l, b)) return c;                      // only the cloud changed it
+    if (same(c, b) || same(l, c)) return l;        // only this device changed it
+    if (isObj(b) && isObj(l) && isObj(c)) {
+      const out = {};
+      new Set([...Object.keys(l), ...Object.keys(c)]).forEach(k => {
+        const v = merge3(b[k], l[k], c[k]);
+        if (v !== undefined) out[k] = v;
+      });
+      return out;
+    }
+    if (Array.isArray(b) && Array.isArray(l) && Array.isArray(c)) {
+      const n = b.length;   // merge item by item when at most one side appended items
+      if (l.length >= n && c.length >= n && (l.length === n || c.length === n))
+        return [...b.map((x, i) => merge3(x, l[i], c[i])), ...l.slice(n), ...c.slice(n)];
+    }
+    return l;   // both changed the same thing: this device's edit is the newer intent
+  }
+
+  /* Writes one budget. Serialized per budget, and always sends what is in storage when it runs.
+     opts.onlyIfInSync: skip unless the cloud still matches base (background writes, e.g. the daily backup).
+     Without a base (first run of this version) a conflicting background write lets the cloud win. */
+  const writeChain = {};
+  function writeBudget(uid, id, opts = {}) {
+    const run = async () => {
+      const local = localStorage.getItem(dataKey(id));
+      if (!local) return { skipped: true };
+      const base = localStorage.getItem(baseKey(id));
+      const res = await db.runTransaction(async tx => {
+        const snap  = await tx.get(budgetRef(uid, id));
+        const cloud = snap.exists ? (snap.data()?.data || null) : null;
+        let out = local;
+        if (cloud && cloud !== local && cloud !== base) {
+          if (opts.onlyIfInSync || (!base && opts.background)) return { skipped: true, cloud };
+          if (base) out = JSON.stringify(merge3(JSON.parse(base), JSON.parse(local), JSON.parse(cloud)));
+        }
+        if (out === cloud) return { out };
+        tx.set(budgetRef(uid, id), { data: out, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        /* Bump user doc so the budget sub-doc listener on other devices fires */
+        tx.set(userRef(uid), { updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        return { out, wrote: true };
+      });
+      if (res.skipped) return res;
+      if (localStorage.getItem(dataKey(id)) === local) {   // not edited again while the write was in flight
+        localStorage.setItem(baseKey(id), res.out);
+        if (res.out !== local) {
+          localStorage.setItem(dataKey(id), res.out);
+          window.dispatchEvent(new CustomEvent('budget-merged', { detail: { id, local, out: res.out } }));
+          toast('☁ Merged changes from another device');
+        }
+      }   // else: keep the old base so the next write merges the newer edit onto the cloud copy
+      return res;
+    };
+    const p = (writeChain[id] || Promise.resolve()).catch(() => {}).then(run);
+    writeChain[id] = p;
+    return p;
+  }
+
   async function flushDirty(uid) {
     let profiles = [];
     try { profiles = JSON.parse(localStorage.getItem('budgetProfiles') || '[]'); } catch (_) {}
@@ -117,7 +185,7 @@
       const data = localStorage.getItem(`budgetPlannerData.${p.id}.v2`);
       if (!data) { localStorage.removeItem(dirtyKey(p.id)); continue; }
       try {
-        await budgetRef(uid, p.id).set({ data, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        await writeBudget(uid, p.id, { background: true });   // a skipped (cloud-wins) flush is resolved too
         localStorage.removeItem(dirtyKey(p.id));
       } catch (e) { console.warn('[BudgetSync] Flush failed for', p.id, e); }
     }
@@ -164,6 +232,10 @@
       if (data) batch.set(budgetRef(uid, p.id), { data, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
     });
     await batch.commit();
+    profiles.forEach(p => {
+      const data = localStorage.getItem(`budgetPlannerData.${p.id}.v2`);
+      if (data) localStorage.setItem(baseKey(p.id), data);
+    });
   }
 
   /* ── Download cloud → localStorage ──
@@ -221,7 +293,10 @@
         if (isDirty(p.id)) return;   // local copy has unsynced edits — keep it
         const bs = await budgetRef(uid, p.id).get();
         if (isDirty(p.id)) return;   // edited while we were fetching
-        if (bs.exists && bs.data().data) localStorage.setItem(`budgetPlannerData.${p.id}.v2`, bs.data().data);
+        if (bs.exists && bs.data().data) {
+          localStorage.setItem(`budgetPlannerData.${p.id}.v2`, bs.data().data);
+          localStorage.setItem(baseKey(p.id), bs.data().data);
+        }
       } catch (_) {}
     }));
 
@@ -325,7 +400,11 @@
     const last = parseInt(localStorage.getItem(DAILY_BACKUP_KEY) || '0');
     if (Date.now() - last < BACKUP_INTERVAL) return;
     try {
-      await pushLocalToCloud(uid);
+      /* Budgets only, and only where the cloud hasn't moved on: this used to push the whole
+         local copy over whatever another device had saved since. */
+      let profiles = [];
+      try { profiles = JSON.parse(localStorage.getItem('budgetProfiles') || '[]'); } catch (_) {}
+      for (const p of profiles) await writeBudget(uid, p.id, { onlyIfInSync: true });
       localStorage.setItem(DAILY_BACKUP_KEY, String(Date.now()));
     } catch (e) {
       console.warn('[BudgetSync] Daily backup failed:', e);
@@ -376,16 +455,7 @@
       markSaving();
       const seq = dirtySeq[profileId] = (dirtySeq[profileId] || 0) + 1;
       localStorage.setItem(dirtyKey(profileId), String(Date.now()));
-      const batch = db.batch();
-      batch.set(budgetRef(currentUser.uid, profileId), {
-        data:      dataStr,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      /* Bump user doc so the budget sub-doc listener on other devices fires */
-      batch.set(userRef(currentUser.uid), {
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-      batch.commit()
+      writeBudget(currentUser.uid, profileId)
         .then(() => { if (dirtySeq[profileId] === seq) localStorage.removeItem(dirtyKey(profileId)); })
         .then(syncLocalTsAfterWrite)
         .catch(e => console.warn('[BudgetSync] saveProfile failed (kept as unsynced):', e));
@@ -405,6 +475,8 @@
 
     isSignedIn() { return !!currentUser; },
     /* Resolves once auth has settled (or after 8s), so callers can trust isSignedIn(). */
+    merge3,
+
     ready() { return Promise.race([authReady, new Promise(r => setTimeout(r, 8000))]); },
 
     /* Debt Planner data for the Budget's debt sync. Signed in -> the CLOUD copy, so every device

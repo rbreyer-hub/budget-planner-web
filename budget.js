@@ -827,6 +827,7 @@ const syncInputs = () => {
 const updateBillField = (i, field, value) => {
   const b = state.bills[i]; if (!b) return;
   if (field==="amount" || field==="dueDay") b[field]=Number(value); else b[field]=value;
+  if (field==="amount" && b.debtId) b.amountManual = true;   // a linked bill's edited amount survives Debt Planner syncs
 };
 
 /* ── Monthly negative balance alert ── */
@@ -1815,6 +1816,17 @@ elements.resetBills.addEventListener("click", () => {
   normalizeBills(); renderBills(); renderPausedBills(); saveState(); calculateEndingBalance(); renderNegativeAlert();
 });
 
+/* ── Another device's edits were merged into this budget during a cloud save ──
+   Fold them into the in-memory state, keeping any edit not yet saved (pending debounce). */
+window.addEventListener('budget-merged', (e) => {
+  const { id, local, out } = e.detail || {};
+  if (id !== activeProfile || !window.cloudSync?.merge3) return;
+  state = window.cloudSync.merge3(JSON.parse(local), state, JSON.parse(out));
+  normalizeBills();
+  chrome.storage.local.set({ [storageKeyForProfile(activeProfile)]: JSON.stringify(state) });
+  refreshAll();
+});
+
 /* ── Sync with Debt Planner ── */
 const readLocalDebtData = () => {
   const raw = localStorage.getItem('debtPlannerData');
@@ -1886,7 +1898,7 @@ const runDebtPlannerSync = async (silent = false) => {
       const next = {
         ...existing,
         name: displayName,
-        amount: newAmount,
+        amount: existing.amountManual && debt.balance > 0.005 ? existing.amount : newAmount,   // a paid-off debt drops to 0 either way
         ...(debt.dueDay > 0 ? { dueDay: debt.dueDay } : {}),
         ...(debt.firstPaymentDate ? { startDate: debt.firstPaymentDate } : {}),   // nothing is charged before the first payment
         manualPayments: withMirroredPayments(existing.manualPayments, debt)
