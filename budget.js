@@ -1827,6 +1827,18 @@ const readLocalDebtData = () => {
    (this browser's own copy can be stale, which made two devices rewrite each other's bills and show
    different balances). If the cloud can't be read, nothing is changed. The budget is only saved when
    a bill actually changes. The automatic (silent) run never removes bills unless the data is the cloud copy. */
+/* Payments entered in the Debt Planner itself (not ones this app sent over, whose notes start "Budget Planner")
+   are mirrored onto the linked bill as manual payments, so the bill shows as paid and isn't projected again
+   that month. Only payments from the balance date's month on matter for the projection. */
+const mirroredDebtPayments = (debt) => {
+  const from = (state.balanceDate || '').slice(0, 7);
+  return (debt.payments || [])
+    .filter(p => p.date && Number(p.amount) > 0 && !/^Budget Planner/.test(p.note || '') && p.date.slice(0, 7) >= from)
+    .map(p => ({ date: p.date, amount: Math.round(Number(p.amount) * 100) / 100, fromDebtPlanner: true }));
+};
+const withMirroredPayments = (manualPayments, debt) =>
+  [...(manualPayments || []).filter(mp => !mp.fromDebtPlanner), ...mirroredDebtPayments(debt)];
+
 const runDebtPlannerSync = async (silent = false) => {
   const src = window.cloudSync?.getDebtPlannerData ? await window.cloudSync.getDebtPlannerData() : { source: 'local' };
   if (window.__budgetReloading) return false;   // a cloud pull is about to reload the page
@@ -1876,7 +1888,8 @@ const runDebtPlannerSync = async (silent = false) => {
         name: displayName,
         amount: newAmount,
         ...(debt.dueDay > 0 ? { dueDay: debt.dueDay } : {}),
-        ...(debt.firstPaymentDate ? { startDate: debt.firstPaymentDate } : {})   // nothing is charged before the first payment
+        ...(debt.firstPaymentDate ? { startDate: debt.firstPaymentDate } : {}),   // nothing is charged before the first payment
+        manualPayments: withMirroredPayments(existing.manualPayments, debt)
       };
       if (JSON.stringify(next) !== JSON.stringify(existing)) { state.bills[existingIdx] = next; updated++; }
     } else {
@@ -1888,7 +1901,7 @@ const runDebtPlannerSync = async (silent = false) => {
         startDate: debt.firstPaymentDate || state.balanceDate,
         type: 'expense',
         debtId: debt.id,
-        manualPayments: []
+        manualPayments: withMirroredPayments([], debt)
       });
       added++;
     }
@@ -2087,12 +2100,16 @@ elements.billTable.addEventListener("click", (e) => {
   if (!bill) return;
   const now = new Date();
   const curY = now.getFullYear(), curM = now.getMonth();
-  const mpIdx = bill.manualPayments ? bill.manualPayments.findLastIndex(mp => {
+  const thisMonth = mp => {
     if (!mp.date) return false;
     const mpd = toDate(mp.date);
     return mpd.getFullYear() === curY && mpd.getMonth() === curM;
-  }) : -1;
-  if (mpIdx === -1) return;
+  };
+  const mpIdx = bill.manualPayments ? bill.manualPayments.findLastIndex(mp => thisMonth(mp) && !mp.fromDebtPlanner) : -1;
+  if (mpIdx === -1) {
+    if ((bill.manualPayments || []).some(thisMonth)) showToast('This payment was entered in the Debt Planner. Remove it there to undo it.');
+    return;
+  }
   const removedDate = bill.manualPayments[mpIdx].date;
   bill.manualPayments.splice(mpIdx, 1);
   const stillHasThisMonth = bill.manualPayments.some(mp => {
